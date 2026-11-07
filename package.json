@@ -1,0 +1,25 @@
+{
+  "name": "internship_tracker",
+  "version": "1.0.0",
+  "description": "A simple app for IT students to track internship applications in one place.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "api": "json-server --watch db.json --port 3001"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anhmy1312/internship_tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Anhmy1312/internship_tracker/issues"
+  },
+  "homepage": "https://github.com/Anhmy1312/internship_tracker#readme",
+  "devDependencies": {
+    "json-server": "^0.17.4"
+  }
+}
