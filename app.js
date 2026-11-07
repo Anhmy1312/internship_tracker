@@ -15,7 +15,7 @@ function loadApplications() {
         const parsed = raw ? JSON.parse(raw) : [];
         return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
-        console.error("Cuold not load applications:", error);
+        console.error("Could not load applications:", error);
         return [];
     }
 }
@@ -112,7 +112,7 @@ form.addEventListener("submit", (event) => {
     const data = Object.fromEntries(new FormData(form));
 
     const newApplication = {
-        id: Date.now.toString(36) + Math.random().toString(36).slice(2, 8),
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         company: data.company.trim(),
         role: data.role.trim(),
         jdUrl: data.jdUrl.trim(),
@@ -130,7 +130,7 @@ form.addEventListener("submit", (event) => {
     form.querySelector("#company").focus();
 });
 
-filterStatus.addEventListener("changer", render);
+filterStatus.addEventListener("change", render);
 sortBy.addEventListener("change", render);
 
 render();
