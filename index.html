@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Internship Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <header class="header">
+        <h1>Internship Tracker</h1>
+        <p>Keep every application, deadline, and next step in one place.</p>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>Add application</h2>
+
+            <form id="application-form">
+                <div class="grid">
+                    <label>
+                        Company
+                        <input id="company" name="company" required />
+                    </label>
+
+                    <label>
+                        Role
+                        <input id="role" name="role" required />
+                    </label>
+
+                    <label>
+                        JD link
+                        <input id="jdUrl" name="jdUrl" type="url" placeholder="https://..." />
+                    </label>
+
+                    <label>
+                        Location
+                        <input id="location" name="location" placeholder="Singapore / Remote" />
+                    </label>
+
+                    <label>
+                        Deadline
+                        <input id="deadline" name="deadline" type="date" required />
+                    </label>
+
+                    <label>
+                        Status
+                        <select id="status" name="status">
+                            <option value="wishlist">Wishlist</option>
+                            <option value="applied" selected>Applied</option>
+                            <option value="interview">Interview</option>
+                            <option value="offer">Offer</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="notes-label">
+                    Notes
+                    <textarea id="notes" name="notes" rows="2" placeholder="Referral, next step, contact..."></textarea>
+                </label>
+
+                <label class="checkbox">
+                    <input id="remote" name="remote" type="checkbox" />
+                    Remote
+                </label>
+
+                <button type="submit">Add application</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="toolbar">
+                <h2>Applications</h2>
+
+                <div class="filters">
+                    <label>
+                        Filter
+                        <select id="filter-status">
+                            <option value="all">All</option>
+                            <option value="wishlist">Wishlist</option>
+                            <option value="applied">Applied</option>
+                            <option value="interview">Interview</option>
+                            <option value="offer">Offer</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Sort by
+                        <select id="sort-by">
+                            <option value="deadline">Deadline</option>
+                            <option value="company">Company</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+
+            <p id="empty-state" class="empty" hidden>
+                No applications yet. Add your first one.
+            </p>
+
+            <ul id="application-list" class="application-list"></ul>
+        </section>
+    </main>
+
+    <template id="application-template">
+        <li class="application">
+            <div class="application-main">
+                <h3 class="company"></h3>
+                <p class="role"></p>
+                <p class="meta">
+                    <span class="location"></span>
+                    <span class="remote"></span>
+                    <span class="deadline"></span>
+                    <a class="jd-link" target="_blank" rel="noopener">JD</a>
+                </p>
+                <p class="notes"></p>
+            </div>
+
+            <div class="application-actions">
+                <select class="status-select" aria-label="Application status">
+                    <option value="wishlist">Wishlist</option>
+                    <option value="applied">Applied</option>
+                    <option value="interview">Interview</option>
+                    <option value="offer">Offer</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <button class="delete-btn" type="button">Delete</button>
+            </div>
+        </li>
+    </template>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

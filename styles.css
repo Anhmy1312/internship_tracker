@@ -1,0 +1,262 @@
+:root {
+    --bg: #f4f0e8;
+    --surface: #fffdf8;
+    --ink: #152019;
+    --muted: #637066;
+    --line: #d9d1c2;
+    --green: #0f6b4f;
+    --green-2: #1b8b68;
+    --rose: #a8435a;
+    --radius: 14px;
+    --shadow: 0 18px 40px -24px rgba(21, 32, 25, 0.35);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+.header {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 20px 8px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: clamp(28px, 5vw, 44px);
+    letter-spacing: -0.03em;
+}
+
+.header p {
+    margin: 6px 0 0;
+    color: var(--muted);
+}
+
+.container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    gap: 20px;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+}
+
+.card h2 {
+    margin: 0 0 14px;
+    font-size: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--green-2);
+    outline-offset: 1px;
+    border-color: transparent;
+}
+
+textarea {
+    resize: vertical;
+}
+
+.notes-label {
+    margin-top: 14px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.checkbox input {
+    width: auto;
+}
+
+button {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--green);
+    color: #fff;
+}
+
+button:hover {
+    background: var(--green-2);
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.toolbar h2 {
+    margin: 0;
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filters label {
+    min-width: 140px;
+}
+
+.application-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.application {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.application-main {
+    min-width: 0;
+}
+
+.application h3 {
+    margin: 0;
+    font-size: 17px;
+}
+
+.application .role {
+    margin: 2px 0 6px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.meta a {
+    color: var(--green);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.meta a:hover {
+    text-decoration: underline;
+}
+
+.notes {
+    margin: 8px 0 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.notes:empty {
+    display: none;
+}
+
+.application-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 140px;
+}
+
+.application-actions select {
+    padding: 8px 10px;
+}
+
+.delete-btn {
+    background: #fff;
+    color: var(--rose);
+    border: 1px solid #e3c3ca;
+}
+
+.delete-btn:hover {
+    background: #f3dde2;
+}
+
+.empty {
+    margin: 18px 0 4px;
+    padding: 22px;
+    text-align: center;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+    .application {
+        flex-direction: column;
+    }
+
+    .application-actions {
+        flex-direction: row;
+    }
+
+    .application-actions select {
+        flex: 1;
+    }
+}
