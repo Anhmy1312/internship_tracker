@@ -12,6 +12,7 @@ React + TypeScript frontend for the Internship Application Tracker.
 From the repository root, start the API:
 
 ```bash
+cd server
 npm install
 npm run api
 ```
