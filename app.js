@@ -1,27 +1,35 @@
-const STORAGE_KEY = "internship-tracker-v1";
+import {
+    getApplications,
+    createApplication,
+    updateApplication,
+    deleteApplication,
+} from "./api.js";
 
 const form = document.querySelector("#application-form");
 const list = document.querySelector("#application-list");
 const emptyState = document.querySelector("#empty-state");
+const errorMessage = document.querySelector("#error-message");
+const loadingState = document.querySelector("#loading-state");
 const filterStatus = document.querySelector("#filter-status");
 const sortBy = document.querySelector("#sort-by");
 const template = document.querySelector("#application-template");
+const submitButton = document.querySelector("#submit-btn");
 
-let applications = loadApplications();
+let applications = [];
 
-function loadApplications() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-        console.error("Could not load applications:", error);
-        return [];
-    }
+function showError(message) {
+    errorMessage.textContent = message;
+    errorMessage.hidden = false;
 }
 
-function saveApplications() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(applications))
+function clearError() {
+    errorMessage.textContent = "";
+    errorMessage.hidden = true;
+}
+
+function setLoading(isLoading) {
+    loadingState.hidden = !isLoading;
+    submitButton.disabled = isLoading;
 }
 
 function formatDeadline(value) {
@@ -51,7 +59,7 @@ function render() {
                 return a.company.localeCompare(b.company);
             }
             return a.deadline.localeCompare(b.deadline);
-        })
+        });
 
     list.innerHTML = "";
 
@@ -80,39 +88,76 @@ function render() {
         const jdUrl = safeUrl(app.jdUrl);
         if (jdUrl) {
             jdLink.href = jdUrl;
-        }
-        else {
+        } else {
             jdLink.remove();
         }
 
         const statusSelect = node.querySelector(".status-select");
         statusSelect.value = app.status;
-        statusSelect.addEventListener("change", () => {
-            app.status = statusSelect.value;
-            saveApplications();
-            render();
+        statusSelect.addEventListener("change", async () => {
+            const previousStatus = app.status;
+            statusSelect.disabled = true;
+            clearError();
+
+            try {
+                const updated = await updateApplication(app.id, {
+                    status: statusSelect.value,
+                });
+                app.status = updated.status;
+                render();
+            } catch (error) {
+                statusSelect.value = previousStatus;
+                showError("Could not update status. Please try again.");
+                console.error(error);
+            } finally {
+                statusSelect.disabled = false;
+            }
         });
 
         const deleteButton = node.querySelector(".delete-btn");
-        deleteButton.addEventListener("click", () => {
+        deleteButton.addEventListener("click", async () => {
             const confirmed = confirm(`Delete ${app.company} — ${app.role}?`);
             if (!confirmed) return;
 
-            applications = applications.filter((item) => item.id !== app.id);
-            saveApplications();
-            render();
-        })
+            deleteButton.disabled = true;
+            clearError();
+
+            try {
+                await deleteApplication(app.id);
+                applications = applications.filter((item) => item.id !== app.id);
+                render();
+            } catch (error) {
+                showError("Could not delete application. Please try again.");
+                console.error(error);
+                deleteButton.disabled = false;
+            }
+        });
+
         list.appendChild(node);
     }
 }
+async function loadFromApi() {
+    clearError();
+    setLoading(true);
 
-form.addEventListener("submit", (event) => {
+    try {
+        applications = await getApplications();
+        render();
+    } catch (error) {
+        showError("Could not load applications. Is json-server running?");
+        console.error(error);
+    } finally {
+        setLoading(false);
+    }
+}
+
+form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    clearError();
 
     const data = Object.fromEntries(new FormData(form));
 
     const newApplication = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         company: data.company.trim(),
         role: data.role.trim(),
         jdUrl: data.jdUrl.trim(),
@@ -123,14 +168,25 @@ form.addEventListener("submit", (event) => {
         notes: data.notes.trim(),
     };
 
-    applications.push(newApplication);
-    saveApplications();
-    form.reset();
-    render();
-    form.querySelector("#company").focus();
+    submitButton.disabled = true;
+
+    try {
+        const created = await createApplication(newApplication);
+        applications.push(created);
+        form.reset();
+        render();
+        form.querySelector("#company").focus();
+    } catch (error) {
+        showError("Could not save application. Please try again.");
+        console.error(error);
+    } finally {
+        submitButton.disabled = false;
+    }
 });
 
 filterStatus.addEventListener("change", render);
 sortBy.addEventListener("change", render);
 
-render();
+loadFromApi();
+
+

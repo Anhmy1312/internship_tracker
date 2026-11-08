@@ -68,11 +68,14 @@
                     Remote
                 </label>
 
-                <button type="submit">Add application</button>
+                <button id="submit-btn" type="submit">Add application</button>
             </form>
         </section>
 
         <section class="card">
+            <p id="error-message" class="error" hidden></p>
+            <p id="loading-state" class="loading" hidden>Loading applications...</p>
+
             <div class="toolbar">
                 <h2>Applications</h2>
 
@@ -134,7 +137,7 @@
         </li>
     </template>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 
 </html>
