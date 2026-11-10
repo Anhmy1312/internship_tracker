@@ -1,3 +1,6 @@
+import { ApplicationList } from "./components/ApplicationList";
+import { sampleApplication } from "./data";
+
 function App() {
   return (
     <>
@@ -9,11 +12,12 @@ function App() {
       <main className="container">
         <section className="card">
           <h2>Applications</h2>
-          <p className="empty">React is running.</p>
+          <ApplicationList applications={sampleApplication} />
         </section>
       </main>
     </>
   );
 }
 
-export default App
+export default App;
+
