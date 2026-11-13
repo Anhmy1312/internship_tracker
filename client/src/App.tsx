@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getApplications } from "./api/applications";
 import { ApplicationForm } from "./components/ApplicationForm";
 import { ApplicationList } from "./components/ApplicationList";
 import { Filters } from "./components/Filters";
-import { sampleApplication } from "./data";
 import type {
   Application,
   ApplicationStatus,
@@ -12,10 +12,34 @@ import type {
 } from "./types";
 
 function App() {
-  const [applications, setApplications] =
-    useState<Application[]>(sampleApplication);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("deadline");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const data = await getApplications();
+        if (!cancelled) setApplications(data);
+      } catch {
+        if (!cancelled) {
+          setError("Could not load applications. Is the API running?");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleCreate(application: NewApplication): boolean {
     const created: Application = {
@@ -69,7 +93,10 @@ function App() {
             onSortChange={setSortBy}
           />
 
-          {visible.length === 0 && (
+          {error && <p className="error">{error}</p>}
+          {loading && <p className="loading">Loading applications...</p>}
+
+          {!loading && !error && visible.length === 0 && (
             <p className="empty">
               {applications.length === 0
                 ? "No applications yet. Add your first one."
@@ -77,11 +104,13 @@ function App() {
             </p>
           )}
 
-          <ApplicationList
-            applications={visible}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDelete}
-          />
+          {!loading && (
+            <ApplicationList
+              applications={visible}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+            />
+          )}
         </section>
       </main>
     </>
