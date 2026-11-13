@@ -1,7 +1,56 @@
+import { useState } from "react";
+import { ApplicationForm } from "./components/ApplicationForm";
 import { ApplicationList } from "./components/ApplicationList";
+import { Filters } from "./components/Filters";
 import { sampleApplication } from "./data";
+import type {
+  Application,
+  ApplicationStatus,
+  NewApplication,
+  SortOption,
+  StatusFilter,
+} from "./types";
 
 function App() {
+  const [applications, setApplications] =
+    useState<Application[]>(sampleApplication);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("deadline");
+
+  function handleCreate(application: NewApplication): boolean {
+    const created: Application = {
+      ...application,
+      id: crypto.randomUUID(),
+    };
+
+    setApplications((previous) => [created, ...previous]);
+    return true;
+  }
+
+  function handleStatusChange(id: string, status: ApplicationStatus) {
+    setApplications((previous) =>
+      previous.map((application) =>
+        application.id === id ? { ...application, status } : application,
+      ),
+    );
+  }
+
+  function handleDelete(id: string) {
+    setApplications((previous) =>
+      previous.filter((application) => application.id !== id),
+    );
+  }
+
+  const visible = applications
+    .filter(
+      (application) =>
+        statusFilter === "all" || application.status === statusFilter,
+    )
+    .sort((a, b) => {
+      if (sortBy === "company") return a.company.localeCompare(b.company);
+      return a.deadline.localeCompare(b.deadline);
+    });
+
   return (
     <>
       <header className="header">
@@ -10,9 +59,29 @@ function App() {
       </header>
 
       <main className="container">
+        <ApplicationForm onCreate={handleCreate} />
+
         <section className="card">
-          <h2>Applications</h2>
-          <ApplicationList applications={sampleApplication} />
+          <Filters
+            status={statusFilter}
+            sortBy={sortBy}
+            onStatusChange={setStatusFilter}
+            onSortChange={setSortBy}
+          />
+
+          {visible.length === 0 && (
+            <p className="empty">
+              {applications.length === 0
+                ? "No applications yet. Add your first one."
+                : "No applications match this filter."}
+            </p>
+          )}
+
+          <ApplicationList
+            applications={visible}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
         </section>
       </main>
     </>
@@ -20,4 +89,3 @@ function App() {
 }
 
 export default App;
-
