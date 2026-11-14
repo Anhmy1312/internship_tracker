@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ApplicationForm } from "./components/ApplicationForm";
 import { ApplicationList } from "./components/ApplicationList";
 import { Filters } from "./components/Filters";
-import { sampleApplication } from "./data";
+import { sampleApplications } from "./data";
 import type {
   Application,
   ApplicationStatus,
@@ -13,7 +13,7 @@ import type {
 
 function App() {
   const [applications, setApplications] =
-    useState<Application[]>(sampleApplication);
+    useState<Application[]>(sampleApplications);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("deadline");
 

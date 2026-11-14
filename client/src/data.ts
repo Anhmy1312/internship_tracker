@@ -1,6 +1,6 @@
 import type { Application } from "./types";
 
-export const sampleApplication: Application[] = [
+export const sampleApplications: Application[] = [
     {
         id: "1",
         company: "Shopee",
