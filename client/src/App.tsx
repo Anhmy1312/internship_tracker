@@ -47,9 +47,6 @@ function App() {
         };
     }, []);
 
-
-
-
     async function handleCreate(application: NewApplication): Promise<boolean> {
         setError(null);
 
@@ -93,7 +90,6 @@ function App() {
             setError("Could not delete application. Please try again.");
             return false;
         }
-
     }
 
     const visible = applications
@@ -125,8 +121,12 @@ function App() {
                     />
 
 
-                    {error && <p className="error">{error}</p>}
-                    {loading && <p className="loading">Loading applications...</p>}
+                    {error && <p className="error" role="alert">{error}</p>}
+                    {loading && (
+                        <p className="loading" role="status">
+                            Loading applications...
+                        </p>
+                    )}
 
                     {!loading && !error && visible.length === 0 && (
                         <p className="empty">
@@ -143,8 +143,6 @@ function App() {
                             onDelete={handleDelete}
                         />
                     )}
-
-
                 </section>
             </main>
         </>
