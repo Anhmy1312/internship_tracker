@@ -81,8 +81,8 @@ npm run preview
 
 Open `http://localhost:4173`. This serves the real production bundle; the API must
 still be running. If `4173` is already in use, Vite prints the next available port.
-The preview reads the same `.env` values as the dev server, so `VITE_API_URL` must
-point at a reachable API for the build you are testing.
+`VITE_API_URL` is baked into the bundle at build time, so rebuild after changing
+`.env` or the client will keep calling the old API URL.
 
 ## Environment
 
