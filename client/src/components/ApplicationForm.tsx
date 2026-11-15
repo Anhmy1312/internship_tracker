@@ -16,11 +16,12 @@ const EMPTY_FORM: NewApplication = {
 };
 
 interface ApplicationFormProps {
-    onCreate: (application: NewApplication) => boolean;
+    onCreate: (application: NewApplication) => Promise<boolean>;
 }
 
 export function ApplicationForm({ onCreate }: ApplicationFormProps) {
     const [form, setForm] = useState<NewApplication>(EMPTY_FORM);
+    const [submitting, setSubmitting] = useState(false);
 
     function updateField<K extends keyof NewApplication>(
         key: K,
@@ -29,20 +30,24 @@ export function ApplicationForm({ onCreate }: ApplicationFormProps) {
         setForm((previous) => ({ ...previous, [key]: value }));
     }
 
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (submitting) return;
 
-        const created = onCreate({
-            ...form,
-            company: form.company.trim(),
-            role: form.role.trim(),
-            jdUrl: form.jdUrl.trim(),
-            location: form.location.trim(),
-            notes: form.notes.trim(),
-        });
+        setSubmitting(true);
+        try {
+            const created = await onCreate({
+                ...form,
+                company: form.company.trim(),
+                role: form.role.trim(),
+                jdUrl: form.jdUrl.trim(),
+                location: form.location.trim(),
+                notes: form.notes.trim(),
+            });
 
-        if (created) {
-            setForm(EMPTY_FORM);
+            if (created) setForm(EMPTY_FORM);
+        } finally {
+            setSubmitting(false);
         }
     }
 
@@ -133,7 +138,9 @@ export function ApplicationForm({ onCreate }: ApplicationFormProps) {
                     Remote
                 </label>
 
-                <button type="submit">Add Application</button>
+                <button type="submit" disabled={submitting}>
+                    {submitting ? "Saving..." : "Add Application"}
+                </button>
             </form>
         </section>
     );

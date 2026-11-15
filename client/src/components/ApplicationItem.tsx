@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { STATUS_LABELS } from "../constants";
 import { STATUSES } from "../types";
 import type { Application, ApplicationStatus } from "../types";
@@ -5,8 +6,8 @@ import { formatDeadline, safeUrl } from "../utils/format";
 
 interface ApplicationItemProps {
     application: Application;
-    onStatusChange: (id: string, status: ApplicationStatus) => void;
-    onDelete: (id: string) => void;
+    onStatusChange: (id: string, status: ApplicationStatus) => Promise<boolean>;
+    onDelete: (application: Application) => Promise<boolean>;
 }
 
 export function ApplicationItem({
@@ -14,7 +15,32 @@ export function ApplicationItem({
     onStatusChange,
     onDelete,
 }: ApplicationItemProps) {
+    const [updating, setUpdating] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const jdUrl = safeUrl(application.jdUrl);
+
+    async function handleStatusChange(status: ApplicationStatus) {
+        setUpdating(true);
+        try {
+            await onStatusChange(application.id, status);
+        } finally {
+            setUpdating(false);
+        }
+    }
+
+    async function handleDelete() {
+        const confirmed = window.confirm(
+            `Delete ${application.company} — ${application.role}?`,
+        );
+        if (!confirmed) return;
+
+        setDeleting(true);
+        try {
+            await onDelete(application);
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     return (
         <li className="application">
@@ -50,9 +76,9 @@ export function ApplicationItem({
                     className="status-select"
                     aria-label="Application status"
                     value={application.status}
+                    disabled={updating}
                     onChange={(event) =>
-                        onStatusChange(
-                            application.id,
+                        handleStatusChange(
                             event.target.value as ApplicationStatus,
                         )
                     }
@@ -67,9 +93,10 @@ export function ApplicationItem({
                 <button
                     className="delete-btn"
                     type="button"
-                    onClick={() => onDelete(application.id)}
+                    onClick={handleDelete}
+                    disabled={deleting}
                 >
-                    Delete
+                    {deleting ? "Deleting..." : "Delete"}
                 </button>
             </div>
         </li>

@@ -2,7 +2,12 @@ import { ApplicationForm } from "./components/ApplicationForm";
 import { ApplicationList } from "./components/ApplicationList";
 import { Filters } from "./components/Filters";
 import { useEffect, useState } from "react";
-import { getApplications } from "./api/applications";
+import {
+    createApplication,
+    deleteApplication,
+    getApplications,
+    updateApplication,
+} from "./api/applications";
 import type {
     Application,
     ApplicationStatus,
@@ -17,6 +22,7 @@ function App() {
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [sortBy, setSortBy] = useState<SortOption>("deadline");
+
 
     useEffect(() => {
         let cancelled = false;
@@ -44,29 +50,50 @@ function App() {
 
 
 
-    function handleCreate(application: NewApplication): boolean {
-        const created: Application = {
-            ...application,
-            id: crypto.randomUUID(),
-        };
-        setApplications((previous) => [...previous, created]);
-        return true;
+    async function handleCreate(application: NewApplication): Promise<boolean> {
+        setError(null);
+
+        try {
+            const created = await createApplication(application);
+            setApplications((previous) => [...previous, created]);
+            return true;
+        } catch {
+            setError("Could not save application. Please try again.");
+            return false;
+        }
+    }
+    async function handleStatusChange(id: string, status: ApplicationStatus): Promise<boolean> {
+        setError(null);
+
+        try {
+            const updated = await updateApplication(id, { status });
+            setApplications((previous) =>
+                previous.map((application) =>
+                    application.id === id ? updated : application,
+                ),
+            );
+            return true;
+        } catch {
+            setError("Could not update status. Please try again.");
+            return false;
+        }
     }
 
-    function handleStatusChange(id: string, status: ApplicationStatus) {
-        setApplications((previous) =>
-            previous.map((application) =>
-                application.id === id
-                    ? { ...application, status }
-                    : application,
-            ),
-        );
-    }
 
-    function handleDelete(id: string) {
-        setApplications((previous) =>
-            previous.filter((application) => application.id !== id),
-        );
+    async function handleDelete(application: Application): Promise<boolean> {
+        setError(null);
+
+        try {
+            await deleteApplication(application.id);
+            setApplications((previous) =>
+                previous.filter((item) => item.id !== application.id),
+            );
+            return true;
+        } catch {
+            setError("Could not delete application. Please try again.");
+            return false;
+        }
+
     }
 
     const visible = applications

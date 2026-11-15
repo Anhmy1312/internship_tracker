@@ -3,8 +3,8 @@ import { ApplicationItem } from "./ApplicationItem";
 
 interface ApplicationListProps {
     applications: Application[];
-    onStatusChange: (id: string, status: ApplicationStatus) => void;
-    onDelete: (id: string) => void;
+    onStatusChange: (id: string, status: ApplicationStatus) => Promise<boolean>;
+    onDelete: (application: Application) => Promise<boolean>;
 }
 
 export function ApplicationList({
