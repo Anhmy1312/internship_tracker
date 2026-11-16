@@ -1,0 +1,39 @@
+# /etc/systemd/system/internship-tracker-api.service
+# Copy từ repo: infra/systemd/internship-tracker-api.service
+#
+# Lưu ý: ExecStart phải trỏ file thật.
+#   TypeScript đã build  -> /usr/bin/node dist/index.js
+#   JavaScript thuần     -> /usr/bin/node src/index.js
+
+[Unit]
+Description=Internship Tracker API
+Documentation=https://github.com/TODO/internship-tracker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/internship-tracker/server
+
+# .env chỉ nằm trên server, KHÔNG commit. Dấu "-" = không lỗi nếu thiếu file.
+EnvironmentFile=-/opt/internship-tracker/server/.env
+Environment=NODE_ENV=production
+
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=internship-tracker-api
+
+# Hardening cơ bản (không phá npm build vì build chạy ngoài unit này)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
