@@ -1,28 +1,54 @@
 # Internship Tracker — API
 
-Local mock API powered by `json-server`. Week 4 replaces this with Express + PostgreSQL.
+Express API for the Internship Application Tracker.
+
+The old `json-server` mock is still available on port `3001` while the Express
+API is being built. Week 4 replaces it with Express + PostgreSQL.
 
 ## Run
 
 ```bash
 cd server
 npm install
-npm run api
+npm run dev
 ```
 
-The API runs at:
+The Express API runs at:
 
 ```text
-http://localhost:3001/applications
+http://127.0.0.1:3000
 ```
+
+Health check:
+
+```bash
+curl http://127.0.0.1:3000/health
+```
+
+```json
+{ "status": "ok", "uptime": 1, "version": "0.1.0" }
+```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Express with file watching |
+| `npm start` | Start Express for deployment |
+| `npm run api` | Start the legacy json-server mock on port 3001 |
+
+## Environment
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `3000` | Express port |
+| `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed origins |
+| `API_VERSION` | `0.1.0` | Value returned by `/health` |
 
 ## Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/applications` | List all applications |
-| `POST` | `/applications` | Create an application |
-| `PATCH` | `/applications/:id` | Update part of an application |
-| `DELETE` | `/applications/:id` | Delete an application |
+| `GET` | `/health` | Health check, no database dependency |
 
-Data is stored in `db.json`.
+CRUD endpoints for `/applications` and PostgreSQL will be added next.
