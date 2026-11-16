@@ -34,6 +34,36 @@
 
 Kiểm tra lại bất cứ lúc nào: `ssh-keygen -lf /home/deploy/.ssh/authorized_keys` (phải ra **đúng 2 dòng**).
 
+**Hardening đã áp dụng 16/11/2026** — file `/etc/ssh/sshd_config.d/00-hardening.conf`:
+
+```text
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+MaxAuthTries 3
+```
+
+> ⚠️ Tên file phải là **`00-hardening.conf`**, không phải `99-`: sshd đọc `sshd_config.d/*` theo thứ tự chữ cái và lấy **giá trị đầu tiên**. Cloud image đã có `50-cloud-init.conf` (set `PasswordAuthentication no`) → đặt `00-` để file của mình luôn thắng.
+
+Kiểm **giá trị hiệu lực**, không kiểm nội dung file:
+
+```bash
+sudo sshd -T | grep -Ei 'permitrootlogin|passwordauthentication|kbdinteractive'
+# permitrootlogin no
+# passwordauthentication no
+# kbdinteractiveauthentication no
+```
+
+Đã verify 16/11: `ssh root@40.83.74.1` → `Permission denied (publickey)`; `ssh staging` (deploy, key) → OK.
+
+**ufw:** `deny incoming`, `allow outgoing`, chỉ mở `22/80/443/tcp` (cả IPv6), bật cùng boot:
+
+```bash
+sudo ufw status verbose     # Status: active + đúng 6 dòng rule (3 v4 + 3 v6)
+systemctl is-enabled ufw    # enabled
+```
+
 **Host key của server — KHÁC 2 key trên** (đây mới là cái hiện ra ở prompt `The authenticity of host '40.83.74.1'` lần SSH đầu):
 
 | Loại | Fingerprint | Lấy bằng lệnh |
@@ -42,7 +72,7 @@ Kiểm tra lại bất cứ lúc nào: `ssh-keygen -lf /home/deploy/.ssh/authori
 
 > Ranh giới cần nhớ: **key user** (bảng trên) = ai được đăng nhập; **host key** = có đúng là máy chủ không (chống MITM). Prompt "authenticity of host" hiện **host key**, không phải key user.
 > ⚠️ Rebuild drill (25–26/11) tạo máy mới → **host key đổi** → máy nào từng SSH sẽ báo `REMOTE HOST IDENTIFICATION HAS CHANGED`. Xoá dòng cũ: `ssh-keygen -R 40.83.74.1` rồi vào lại, so fingerprint mới (SSH sẽ tự ghi vào `known_hosts`).
-**Lệnh SSH:** `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_it" deploy@40.83.74.1`.
+**Lệnh SSH:** `ssh staging` (alias trong `C:\Users\PC\.ssh\config`), hoặc đầy đủ `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_it" deploy@40.83.74.1`.
 
 **Nơi giữ bí mật (không nằm trong repo):** private key SSH → [TODO: password manager], token DNS → [TODO: DuckDNS account].
 
