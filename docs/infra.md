@@ -29,7 +29,7 @@
 
 | Ai | Comment | Fingerprint | Private key ở đâu |
 |---|---|---|---|
-| Bạn (infra) | `it-staging` | `SHA256:e0tJmyu3C0Ph8gL7OWyZunje3X141jCPqY0LTATJ61k` | `C:\Users\PC\.ssh\id_ed25519_it` |
+| Bạn (infra) | `it-staging` | `SHA256:e0tJwyu3C0Ph8gL7OWyZunje3X141jCPqY0lTATJ61k` | `C:\Users\PC\.ssh\id_ed25519_it` |
 | Partner | `admin@Admin-PC` | `SHA256:MHV8W6eJwCKWz1HTeNgC+nvScbgykLhQCV1VBLXApTM` | máy partner — **không** ai khác giữ |
 
 Kiểm tra lại bất cứ lúc nào: `ssh-keygen -lf /home/deploy/.ssh/authorized_keys` (phải ra **đúng 2 dòng**).
