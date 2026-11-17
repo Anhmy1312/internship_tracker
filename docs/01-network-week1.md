@@ -439,8 +439,8 @@ Bằng chứng: `docs/evidence/19-reboot-test.txt` (log `systemctl is-active` + 
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot certonly --nginx -d staging.<domain> --dry-run   # KHÔNG tốn quota
-sudo certbot certonly --nginx -d staging.<domain>             # cấp thật
+sudo certbot certonly --nginx -d internship-tracker.duckdns.org --dry-run   # KHÔNG tốn quota
+sudo certbot certonly --nginx -d internship-tracker.duckdns.org             # cấp thật
 sudo certbot certificates
 ```
 
@@ -477,21 +477,21 @@ File `.conf` này đã: redirect 80→301, `TLSv1.2 TLSv1.3`, HSTS, security hea
 ### 20.3. Chứng minh từ Windows
 
 ```powershell
-curl.exe -I http://staging.<domain>/health     # 301 + Location: https://...
-curl.exe -sS https://staging.<domain>/health   # 200 + JSON
-curl.exe -I https://staging.<domain>/          # 200 + 4 header
-curl.exe -I https://staging.<domain>/health | Select-String -Pattern "strict-transport|x-content-type|x-frame|referrer"
+curl.exe -I http://internship-tracker.duckdns.org/health     # 301 + Location: https://...
+curl.exe -sS https://internship-tracker.duckdns.org/health   # 200 + JSON
+curl.exe -I https://internship-tracker.duckdns.org/          # 200 + 4 header
+curl.exe -I https://internship-tracker.duckdns.org/health | Select-String -Pattern "strict-transport|x-content-type|x-frame|referrer"
 ```
 
 Hoặc chạy script có sẵn (kiểm tra 1 lượt DNS/TLS/redirect/headers/404):
 
 ```powershell
-powershell -File "infra\scripts\verify.ps1" -TargetHost staging.<domain>
+powershell -File "infra\scripts\verify.ps1" -TargetHost internship-tracker.duckdns.org
 ```
 
 ### 20.4. SSL Labs
 
-Mở `https://www.ssllabs.com/ssltest/analyze.html?d=staging.<domain>&hideResults=on`, chờ 1–3 phút. Lưu ảnh **có ngày** vào `docs/evidence/20-ssllabs.png`.
+Mở `https://www.ssllabs.com/ssltest/analyze.html?d=internship-tracker.duckdns.org&hideResults=on`, chờ 1–3 phút. Lưu ảnh **có ngày** vào `docs/evidence/20-ssllabs.png`.
 
 | Hạng | Nghĩa | Sửa nếu thấp |
 |---|---|---|
@@ -524,12 +524,12 @@ UptimeRobot → Add New Monitor:
 | Trường | Giá trị |
 |---|---|
 | Type | **Keyword** (tốt hơn HTTP: bắt cả trường hợp 200 nhưng body sai) |
-| URL | `https://staging.<domain>/health` |
+| URL | `https://internship-tracker.duckdns.org/health` |
 | Keyword | `"status":"ok"` |
 | Interval | 5 phút (free) |
 | Alert contacts | email chung + **Webhook → Discord URL** |
 
-Thêm monitor thứ 2 (tùy chọn, rất đáng): `http://staging.<domain>/health`, kỳ vọng **301** — bắt được lỗi ai đó tắt redirect.
+Thêm monitor thứ 2 (tùy chọn, rất đáng): `http://internship-tracker.duckdns.org/health`, kỳ vọng **301** — bắt được lỗi ai đó tắt redirect.
 
 > Đừng tự host Uptime Kuma trên **cùng** VPS: VPS chết thì monitor chết theo, không ai báo. Uptime Kuma chỉ hợp khi đặt ở máy/host khác (MVP sau).
 
@@ -545,7 +545,7 @@ Chờ ≥ 6 phút (interval 5' + 1' trễ), xác nhận Discord/email có alert,
 
 ```bash
 sudo systemctl start nginx
-curl -sS https://staging.<domain>/health
+curl -sS https://internship-tracker.duckdns.org/health
 ```
 
 Ghi vào `docs/infra.md` mục 12: **stop lúc ___, nhận alert lúc ___, độ trễ ___ phút**, ảnh `21-alert.png`.
