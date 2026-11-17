@@ -1,0 +1,75 @@
+# Bootstrap script test - 17/11/2026
+# Host: vm-it-staging (40.83.74.1)
+# Command: sudo PUBKEY_FILE=/home/deploy/.ssh/authorized_keys bash /tmp/bootstrap.sh --harden
+# Ket qua: script chay het (in XONG), exit 0
+# Muc dich: chung minh infra/bootstrap.sh chay lai duoc (idempotent)
+
+
+==> Cập nhật và cài package
+
+==> User deploy đã tồn tại
+
+==> Đã cài public key cho deploy
+
+==> Cấu hình ufw
+Default incoming policy changed to 'deny'
+(be sure to update your rules accordingly)
+Default outgoing policy changed to 'allow'
+(be sure to update your rules accordingly)
+Skipping adding existing rule
+Skipping adding existing rule (v6)
+Skipping adding existing rule
+Skipping adding existing rule (v6)
+Skipping adding existing rule
+Skipping adding existing rule (v6)
+Firewall is active and enabled on system startup
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    Anywhere                  
+80/tcp                     ALLOW IN    Anywhere                  
+443/tcp                    ALLOW IN    Anywhere                  
+22/tcp (v6)                ALLOW IN    Anywhere (v6)             
+80/tcp (v6)                ALLOW IN    Anywhere (v6)             
+443/tcp (v6)               ALLOW IN    Anywhere (v6)             
+
+
+==> Cấu hình fail2ban cho sshd
+Synchronizing state of fail2ban.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable fail2ban
+
+==> Bật unattended-upgrades
+
+==> Ghi cấu hình hardening SSH
+
+==> Reload sshd (session hiện tại vẫn sống)
+
+==> Kiểm tra lại
+permitrootlogin              no
+passwordauthentication       no
+kbdinteractiveauth           no
+ssh port                     22
+
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW       Anywhere                  
+80/tcp                     ALLOW       Anywhere                  
+443/tcp                    ALLOW       Anywhere                  
+22/tcp (v6)                ALLOW       Anywhere (v6)             
+80/tcp (v6)                ALLOW       Anywhere (v6)             
+443/tcp (v6)               ALLOW       Anywhere (v6)             
+
+
+XONG. Bắt buộc làm ngay, theo thứ tự:
+  1. Terminal MỚI:  ssh deploy@<IP>      (phải vào được)
+  2. Thử root:      ssh root@<IP>              (phải bị từ chối)
+  3. Chỉ khi (1) OK mới đóng session root/console hiện tại.
+
+Nếu (1) fail: vào console provider, sửa/xoá /etc/ssh/sshd_config.d/00-hardening.conf,
+rồi systemctl reload ssh. Đừng hoảng — ufw đã mở 22 và session cũ vẫn còn.
