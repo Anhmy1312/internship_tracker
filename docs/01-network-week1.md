@@ -10,17 +10,17 @@
 
 ```text
 Trình duyệt
-  │ ① DNS: staging.<domain> → ?        (A record, TTL 300)
+  │ ① DNS: internship-tracker.duckdns.org → IP   (A record DuckDNS)
   ▼
-  │ ② TCP :443  → IP VPS              (ufw allow 443)
+  │ ② TCP :80 (18–19/11) / :443 (từ 20/11)      (NSG + ufw allow)
   ▼
-Nginx :443                             (TLS, redirect, headers)
-  │ ③ proxy_pass 127.0.0.1:3000
+Nginx
+  │ ③ đọc 4 file tĩnh trong /var/www/internship-tracker
   ▼
-Node service (systemd)                 (chỉ bind localhost)
-  ▼
-200 JSON
+200 HTML  (và 200 JSON ở /health)
 ```
+
+> Trial chạy **site tĩnh** — không Node, không systemd unit (quyết định #7).
 
 | Lớp | Khái niệm | Kiểm tra bằng | Hỏng thì thấy gì |
 |---|---|---|---|
@@ -28,11 +28,11 @@ Node service (systemd)                 (chỉ bind localhost)
 | Firewall/cloud | port 22/80/443 được mở 2 lớp: cloud + ufw | `Test-NetConnection -Port 80` | timeout (không phải "refused") |
 | TCP | có process listen không | `ss -ltnp` | `Connection refused` |
 | TLS | cert đúng host, còn hạn | `curl -v`, SSL Labs | `certificate verify failed` |
-| HTTP | status code, header | `curl -I` | 301/404/502 |
-| Reverse proxy | Nginx → app | `nginx -t`, error log | 502/504 |
-| Service | systemd giữ process sống | `systemctl status`, `journalctl` | 502 sau reboot |
+| HTTP | status code, header | `curl -I` | 301/404/403 |
+| Nginx config | `root` + `try_files` đúng | `nginx -t`, `nginx -T \| grep root` | 404 dù file có thật |
+| File tĩnh | 4 file đọc được bởi `www-data` | `ls -l /var/www/internship-tracker` | 403 Forbidden |
 
-**Quy tắc vàng của tuần này:** mỗi ngày chỉ thêm **một lớp**, và lớp mới chỉ được coi là xong khi có **lệnh chứng minh**. Đừng làm DNS + Nginx + Node + TLS trong một buổi.
+**Quy tắc vàng của tuần này:** mỗi ngày chỉ thêm **một lớp**, và lớp mới chỉ được coi là xong khi có **lệnh chứng minh**. Đừng làm DNS + Nginx + file tĩnh + TLS trong một buổi.
 
 ---
 
@@ -76,7 +76,7 @@ Kỳ vọng: IP in ra **40.83.74.1**; `Ubuntu 24.04.x LTS`. Dùng **UTC** để 
 
 ### 1.3. Thêm swap 2 GB (bắt buộc với máy 1 GiB RAM)
 
-Không có swap thì Node sẽ bị **OOM-kill** đúng lúc demo:
+Máy chỉ có 1 GiB RAM — swap để `apt`/`certbot` không bị **OOM-kill** đúng lúc demo:
 
 ```bash
 sudo fallocate -l 2G /swapfile
@@ -224,6 +224,8 @@ Nguyên tắc: **console provider là đường sống**, không phải "may m�
 ---
 
 ## Ngày 18/11 (T4) — Nginx phục vụ site tĩnh, `http://<host>` trả 200
+
+> ✅ **Đã làm 18/11** — Nginx 1.24, site tĩnh trong `/var/www/internship-tracker`: `/` → 200 HTML, `/health` → 200 JSON, `/khong-co` → 404. Bằng chứng: `docs/evidence/18-curl-http.txt`.
 
 **Thời lượng:** 2h. **Deliverable:** `http://internship-tracker.duckdns.org/` trả **200** (`index.html`), `/health` trả JSON tĩnh.
 
@@ -455,24 +457,29 @@ Lỗi hay gặp:
 
 ### 20.2. Bật cấu hình HTTPS
 
+```powershell
+# trên Windows, tại C:\dev\internship_tracker
+scp infra\nginx\snippets\tls.conf infra\nginx\snippets\security.conf staging:/tmp/
+scp infra\nginx\internship-tracker.conf staging:/tmp/internship-tracker.https.conf
+```
+
 ```bash
 sudo mkdir -p /etc/nginx/snippets
-sudo cp /opt/internship-tracker/infra/nginx/snippets/*.conf /etc/nginx/snippets/
-sudo cp /opt/internship-tracker/infra/nginx/internship-tracker.conf /etc/nginx/sites-available/internship-tracker
-sudo sed -i 's/staging\.example\.com/staging.<domain>/g' /etc/nginx/sites-available/internship-tracker
+sudo cp /tmp/tls.conf /tmp/security.conf /etc/nginx/snippets/
+sudo cp /tmp/internship-tracker.https.conf /etc/nginx/sites-available/internship-tracker
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-File `.conf` này đã: redirect 80→301, `TLSv1.2 TLSv1.3`, HSTS, security headers qua snippet, `/` trả 404, `/health` proxy.
+File `.conf` này đã: redirect 80→301, `TLSv1.2 TLSv1.3`, HSTS, security headers qua snippet, `/` phục vụ site tĩnh, `/health` JSON tĩnh.
 
-> **Nếu hôm 19/11 bạn đã chuyển `/health` sang `proxy_pass`** thì trong file `.conf` vừa copy cũng phải làm lại đúng vậy (comment block tĩnh, bỏ comment block proxy). Không làm thì `/health` tự quay về bản tĩnh và mất bằng chứng "request đi qua app".
+> Cùng một `root /var/www/internship-tracker` cho cả HTTP và HTTPS — đổi phase không phải copy lại file.
 
 ### 20.3. Chứng minh từ Windows
 
 ```powershell
 curl.exe -I http://staging.<domain>/health     # 301 + Location: https://...
 curl.exe -sS https://staging.<domain>/health   # 200 + JSON
-curl.exe -I https://staging.<domain>/          # 404 nhưng VẪN có 4 header
+curl.exe -I https://staging.<domain>/          # 200 + 4 header
 curl.exe -I https://staging.<domain>/health | Select-String -Pattern "strict-transport|x-content-type|x-frame|referrer"
 ```
 
@@ -531,13 +538,13 @@ Thêm monitor thứ 2 (tùy chọn, rất đáng): `http://staging.<domain>/heal
 ```bash
 # trên VPS, ghi lại giờ
 date -u +%FT%TZ
-sudo systemctl stop internship-tracker-api
+sudo systemctl stop nginx
 ```
 
 Chờ ≥ 6 phút (interval 5' + 1' trễ), xác nhận Discord/email có alert, ghi giờ nhận. Rồi:
 
 ```bash
-sudo systemctl start internship-tracker-api
+sudo systemctl start nginx
 curl -sS https://staging.<domain>/health
 ```
 
@@ -592,7 +599,7 @@ Body PR tối thiểu 4 mục:
 ```markdown
 ## Đã làm
 - VPS Ubuntu 24.04, user deploy, SSH key-only, ufw 22/80/443, fail2ban
-- DNS A record, Nginx reverse proxy /health, HTTP→HTTPS 301
+- DNS A record, Nginx phục vụ site tĩnh + `/health` JSON, HTTP→HTTPS 301
 - Certbot TLS, HSTS + security headers, SSL Labs A
 - UptimeRobot keyword monitor + Discord alert (đã test thật)
 
@@ -618,7 +625,7 @@ PR: #<số>
 Đang làm: rate limit + fail2ban Nginx + backup config
 Block: (không có / mô tả + đã báo ngày nào)
 Rủi ro: chưa có TLS expiry alert
-Cần bạn hỗ trợ: Express skeleton + /health thật để chuyển pha 2 (23/11)
+Cần bạn hỗ trợ: nội dung/trang cho site tĩnh (không cần API trong trial)
 Giờ đã dùng: __/10h
 Tuần sau dự kiến: API thật sau Nginx, backup/restore, runbook, rebuild drill
 ```
@@ -639,8 +646,8 @@ Tuần sau dự kiến: API thật sau Nginx, backup/restore, runbook, rebuild d
 | Renew chạy được | `sudo certbot renew --dry-run` | `Congratulations` / `simulating` |
 | Alert hoạt động | stop service, chờ 6' | có tin Discord |
 | DNS đúng | `Resolve-DnsName <host> -Type A` | đúng IP |
-| App chỉ nghe localhost | `ss -ltnp \| grep 3000` | `127.0.0.1:3000` |
-| 404 vẫn có header | `curl.exe -I https://<host>/` | 404 + 4 header |
+| Site tĩnh đủ file | `ls -l /var/www/internship-tracker` | 4 file, `www-data` đọc được |
+| 404 vẫn có header | `curl.exe -I https://<host>/khong-co` | 404 + 4 header |
 
 ---
 

@@ -113,8 +113,13 @@ $need = @('strict-transport-security', 'x-content-type-options', 'x-frame-option
 $missing = @($need | Where-Object { -not $h443.Headers.ContainsKey($_) })
 Add-Check 'Headers tren 200' ($missing.Count -eq 0) ("thieu: " + ($missing -join ', '))
 
-$h404 = Get-Head "https://$TargetHost/"
-Add-Check 'Root tra 404' ($h404.Status -eq 404) "status=$($h404.Status)"
+$hRoot = Get-Head "https://$TargetHost/"
+Add-Check 'Root tra 200' ($hRoot.Status -eq 200) "status=$($hRoot.Status)"
+$missingRoot = @($need | Where-Object { -not $hRoot.Headers.ContainsKey($_) })
+Add-Check 'Headers tren 200 (root)' ($missingRoot.Count -eq 0) ("thieu: " + ($missingRoot -join ', '))
+
+$h404 = Get-Head "https://$TargetHost/khong-co"
+Add-Check '404 tra 404' ($h404.Status -eq 404) "status=$($h404.Status)"
 $missing404 = @($need | Where-Object { -not $h404.Headers.ContainsKey($_) })
 Add-Check 'Headers tren 404' ($missing404.Count -eq 0) ("thieu: " + ($missing404 -join ', '))
 

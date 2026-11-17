@@ -1,34 +1,24 @@
 #!/usr/bin/env bash
-# Deploy code mới lên staging. Chạy bằng user deploy (hoặc sudo -u deploy).
+# Deploy site tinh len staging. Chay tu MAY DEV (khong chay tren VPS).
 #
-#   bash /opt/internship-tracker/infra/scripts/deploy.sh
+#   bash infra/scripts/deploy.sh
+#   TARGET=staging HOST=internship-tracker.duckdns.org bash infra/scripts/deploy.sh
 #
-# Không dùng để cấu hình hạ tầng — chỉ kéo code + build + restart.
+# Khong build, khong restart service: chi copy 4 file vao web root.
 
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/opt/internship-tracker}"
-SERVICE="${SERVICE:-internship-tracker-api}"
+TARGET="${TARGET:-staging}"
+DEST="${DEST:-/var/www/internship-tracker}"
+HOST="${HOST:-internship-tracker.duckdns.org}"
 
-cd "$APP_DIR"
+cd "$(dirname "$0")/../.."
 
-echo "==> Code hiện tại: $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
-git pull --ff-only
+echo "==> Copy 4 file tinh -> $TARGET:$DEST"
+scp index.html styles.css app.js favicon.svg "$TARGET:$DEST/"
 
-cd server
-npm ci
-npm run build
+echo "==> Kiem tra tu ngoai"
+curl -fsS "http://$HOST/health"; echo
+curl -fsS -o /dev/null -w "GET / -> %{http_code}\n" "http://$HOST/"
 
-echo "==> Restart $SERVICE"
-sudo systemctl restart "$SERVICE"
-sleep 2
-sudo systemctl --no-pager --lines=15 status "$SERVICE" || true
-
-echo "==> Health check local"
-if curl -fsS --max-time 5 http://127.0.0.1:3000/health; then
-  echo
-  echo "OK. Kiểm tra công khai: curl -I https://<host>/health"
-else
-  echo "FAIL: app không trả /health. Xem: sudo journalctl -u $SERVICE -n 80 --no-pager" >&2
-  exit 1
-fi
+echo "OK"

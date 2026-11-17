@@ -8,27 +8,28 @@
 ## 1. Sơ đồ
 
 ```text
-Người dùng gõ https://staging.example.com/health
+Người dùng gõ https://internship-tracker.duckdns.org/
         │
-   ①   DNS     A record → 203.0.113.10   (TTL 300)
+   ①   DNS     A record → 40.83.74.1     (DuckDNS)
         │
-   ②   TCP     mở 443 tới IP             (ufw + cloud firewall)
+   ②   TCP     mở 443 tới IP             (NSG Azure + ufw)
         │
-   ③   TLS     SNI = staging.example.com
+   ③   TLS     SNI = internship-tracker.duckdns.org
                cert Let's Encrypt (fullchain) + TLS 1.2/1.3
         │
-   ④   HTTP    GET /health   Host: staging.example.com
+   ④   HTTP    GET /   Host: internship-tracker.duckdns.org
         │
-   ⑤   Nginx   :443, server_name khớp → location = /health
-        │      (thêm X-Forwarded-For, X-Forwarded-Proto)
-   ⑥   proxy_pass → 127.0.0.1:3000
+   ⑤   Nginx   :443, server_name khớp → location /
         │
-   ⑦   Node (systemd) trả 200 {"status":"ok"}
+   ⑥   File    root /var/www/internship-tracker
+               try_files $uri → index.html
+        │
+   ⑦   200 HTML  (site tĩnh)   —   /health → 200 JSON tĩnh
         │
    ⑧   Nginx thêm HSTS + security headers → trình duyệt
 ```
 
-Sau MVP, `⑦` gọi tiếp PostgreSQL → đường đi thành 9 lớp. Lúc đó phải quyết định `/health` chỉ báo "process sống" hay báo cả "DB sống" (deep health).
+Trial chạy **site tĩnh**: không Node, không systemd, không proxy. Khi có API thật (sau trial), chỉ thêm một `location /api/` trỏ tới app — các lớp ①–⑤ và ⑧ giữ nguyên.
 
 ---
 
@@ -37,20 +38,20 @@ Sau MVP, `⑦` gọi tiếp PostgreSQL → đường đi thành 9 lớp. Lúc đ
 | # | Lớp | Lệnh kiểm tra | Lỗi đặc trưng | Nghĩa |
 |---|---|---|---|---|
 | ① | DNS | `Resolve-DnsName <host> -Type A` | `curl: (6)`, `ERR_NAME_NOT_RESOLVED` | record sai / chưa lan / AAAA sai |
-| ② | TCP | `Test-NetConnection <IP> -Port 443` | **timeout** | firewall (cloud hoặc ufw) chặn |
+| ② | TCP | `Test-NetConnection 40.83.74.1 -Port 443` | **timeout** | firewall (NSG hoặc ufw) chặn |
 | ② | TCP | `ss -ltnp` rồi lọc `:443` | **Connection refused** | không có process listen (nginx chết) |
 | ③ | TLS | `curl.exe -vI https://<host>` | `certificate verify failed`, `expired` | sai host trong cert / hết hạn / thiếu chain |
 | ④ | HTTP | `curl.exe -I https://<host>/health` | 301 vòng lặp, 404 | redirect sai, `server_name` không khớp |
 | ⑤ | Nginx | `nginx -T`, `tail error.log` | 404 | request vào sai server block |
-| ⑥ | Proxy | `ss -ltnp`, `journalctl -u <svc>` | **502** | app chết / sai port / bind sai |
-| ⑥ | Proxy | `time curl -sS 127.0.0.1:3000/health` | **504** | app treo, vượt `proxy_read_timeout` |
-| ⑦ | Service | `systemctl status`, `journalctl` | 502 sau reboot | unit không `enable` / crash loop |
+| ⑥ | Web root | `ls -l /var/www/internship-tracker` | **403** | thiếu file / `www-data` không đọc được |
+| ⑥ | `try_files` | `nginx -T \| grep -E 'root\|try_files'` | 404 dù file có thật | sai `root` hoặc thiếu `index` |
+| ⑦ | Nội dung | `curl -sS https://<host>/health` | JSON sai `phase` | đang nạp nhầm config phase |
 | ⑧ | Header | `curl.exe -I` trên cả 200 và 404 | thiếu HSTS/XCTO | `add_header` bị location ghi đè |
 
 Hai chỗ người mới hay nhầm:
 
 - **Timeout vs refused.** Timeout = gói tin bị chặn (firewall/cloud). Refused = tới được máy nhưng không ai nghe cổng đó (service chết). Sửa hai thứ khác nhau.
-- **404 vs 502.** 404 = Nginx trả lời (lớp ⑤ đúng, sai route). 502 = Nginx gọi app và app không trả lời (lớp ⑥ sai). Thấy 502 thì **đừng** sửa Nginx trước.
+- **403 vs 404.** 403 = Nginx tìm thấy đường dẫn nhưng user `www-data` không đọc được (quyền file). 404 = Nginx không tìm thấy file (`root`/`try_files` sai, hoặc file chưa deploy). Sửa hai thứ khác nhau.
 
 ---
 
@@ -58,14 +59,14 @@ Hai chỗ người mới hay nhầm:
 
 > Nói theo thứ tự này, chỉ tay vào sơ đồ, không đọc thuộc lòng:
 
-1. "Trình duyệt hỏi DNS: `staging.<domain>` là IP nào? A record trả về IP VPS, TTL 300 giây để mình đổi IP mà không phải chờ lâu."
-2. "Nó mở TCP tới cổng 443. Firewall chỉ mở 22, 80, 443 — 3000 không bao giờ lộ ra Internet."
+1. "Trình duyệt hỏi DNS: `internship-tracker.duckdns.org` là IP nào? A record trả về IP tĩnh của VPS."
+2. "Nó mở TCP tới cổng 443. Firewall mở đúng 22, 80, 443 ở hai lớp: NSG của Azure và ufw trên máy — không cổng nào khác lộ ra Internet."
 3. "TLS bắt tay: SNI cho Nginx biết người dùng muốn host nào, Nginx trả cert Let's Encrypt của đúng host đó. TLS 1.0/1.1 đã tắt."
-4. "Nginx so `Host` với `server_name`; khớp thì vào `location = /health`."
-5. "Nginx không tự trả lời — nó `proxy_pass` sang `127.0.0.1:3000`, thêm `X-Forwarded-For` và `X-Forwarded-Proto` để app biết IP thật và biết request gốc là HTTPS."
-6. "Node chạy dưới systemd, tự restart khi crash và tự lên sau reboot."
+4. "Nginx so `Host` với `server_name`; khớp thì vào `location /`."
+5. "Nginx lấy file từ `/var/www/internship-tracker`: `/` ra `index.html`, file có thật thì trả file, còn lại 404."
+6. "Đây là site tĩnh nên không có app phía sau; `/health` là JSON tĩnh để monitor kiểm tra DNS + Nginx + TLS."
 7. "Trên đường về, Nginx thêm HSTS và security headers; cổng 80 chỉ tồn tại để trả 301."
-8. "Cả chuỗi này kiểm được bằng 4 lệnh: `Resolve-DnsName`, `curl -I`, `ss -ltnp`, `journalctl`. Đó cũng là checklist khi có sự cố."
+8. "Cả chuỗi này kiểm được bằng 4 lệnh: `Resolve-DnsName`, `curl -I`, `ss -ltnp`, `ls /var/www`. Đó cũng là checklist khi có sự cố."
 
 ---
 
@@ -73,13 +74,13 @@ Hai chỗ người mới hay nhầm:
 
 | Câu hỏi | Trả lời ngắn |
 |---|---|
-| Vì sao cần Nginx, sao không cho Node nghe 443? | Node không cần quyền root cho 443, không phải lo cert/reload; Nginx lo TLS, redirect, header, rate limit, log tập trung; đổi app không đụng cổng public. |
-| Vì sao app bind `127.0.0.1`? | Chỉ Nginx trên cùng máy cần gọi. Bind `0.0.0.0` là mở thêm cửa mà ufw không quản (nhất là khi có Docker). |
+| Site tĩnh sao vẫn cần Nginx, sao không dùng GitHub Pages? | Có chủ đích: học TLS, firewall, redirect, header, log, rate limit trên máy tự vận hành; sau này thêm API cùng host không phải đổi kiến trúc. |
+| Vì sao không mở cổng nào ngoài 22/80/443? | Mỗi cổng mở là một bề mặt tấn công. Site chỉ cần 80/443; SSH chỉ 22 và đã key-only + fail2ban. |
 | HSTS để làm gì, rủi ro gì? | Ép browser luôn HTTPS, chống hạ cấp. Rủi ro: một chiều — bật `includeSubDomains`/`preload` sai là subdomain hỏng, khó lùi. |
-| Cert hết hạn thì sao? | Browser cảnh báo đỏ, API client fail. Certbot timer tự renew; `certbot renew --dry-run` chứng minh; MVP thêm alert trước 14 ngày. |
-| 502 lúc 2h sáng, bạn làm gì? | `curl` từ ngoài → `systemctl status` → `journalctl -u` → `ss -ltnp` → `df -h`; khôi phục, xác nhận monitor xanh, ghi `docs/incidents/`. |
+| Cert hết hạn thì sao? | Browser cảnh báo đỏ, client fail. Certbot timer tự renew; `certbot renew --dry-run` chứng minh; MVP thêm alert trước 14 ngày. |
+| Site 403 lúc 2h sáng, bạn làm gì? | `curl` từ ngoài → `systemctl status nginx` → `ls -l /var/www` + `namei -l` → `nginx -T \| grep root` → `df -h`; khôi phục, xác nhận monitor xanh, ghi lại nguyên nhân. |
 | Vì sao không dùng PaaS cho nhanh? | Đánh đổi có chủ ý: học được TLS/firewall/reverse proxy/backup, kiểm soát chi phí; đổi lại phải tự vận hành và tự chịu downtime. |
-| Bảo mật ở lớp network gồm những gì? | 3 port, key-only SSH, fail2ban, TLS hiện đại, HSTS, rate limit, không lộ app port, secret ngoài repo, log đủ để truy vết. |
+| Bảo mật ở lớp network gồm những gì? | 3 port, key-only SSH, fail2ban, TLS hiện đại, HSTS, rate limit (tuần 2), secret ngoài repo, log đủ để truy vết. |
 
 ---
 
