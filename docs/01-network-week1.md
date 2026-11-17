@@ -223,11 +223,13 @@ Nguyên tắc: **console provider là đường sống**, không phải "may m�
 
 ---
 
-## Ngày 18/11 (T4) — DNS + Nginx, `http://<host>` trả 200
+## Ngày 18/11 (T4) — Nginx phục vụ site tĩnh, `http://<host>` trả 200
 
-**Thời lượng:** 2h. **Deliverable:** DNS trỏ đúng IP, Nginx phục vụ `/health` tĩnh.
+**Thời lượng:** 2h. **Deliverable:** `http://internship-tracker.duckdns.org/` trả **200** (`index.html`), `/health` trả JSON tĩnh.
 
 ### 18.1. Trỏ hostname về IP (DuckDNS)
+
+> ✅ **Đã làm 16/11**: `internship-tracker.duckdns.org` → `40.83.74.1`, kiểm chứng ở `docs/evidence/16-dns.png`. Giữ phần dưới để dựng lại khi rebuild.
 
 | Type | Name | Value | TTL |
 |---|---|---|---|
@@ -270,27 +272,43 @@ curl.exe -I http://40.83.74.1
 - `200` → port 80 thông, đi tiếp.
 - `timeout` → **NSG của Azure chưa mở 80** (Portal → VM → Networking → Inbound port rules). Đây là nguyên nhân số 1 khi lên Azure.
 
-### 18.3. Đưa site config vào
+### 18.3. Đưa site tĩnh + site config vào
 
-Clone repo lên VPS trước (nếu chưa):
+Site chỉ có 4 file ở gốc repo: `index.html`, `styles.css`, `app.js`, `favicon.svg`.
+Không clone repo lên VPS, không cần Node: deploy bằng `scp` từ máy dev.
+
+**a) Tạo web root và copy file:**
 
 ```bash
-sudo mkdir -p /opt/internship-tracker
-sudo chown deploy:deploy /opt/internship-tracker
-sudo -u deploy git clone https://github.com/<org>/<repo>.git /opt/internship-tracker
+ssh staging "sudo mkdir -p /var/www/internship-tracker && sudo chown -R deploy:deploy /var/www/internship-tracker"
 ```
 
-File **pha 1** (HTTP only, chưa cần cert): `infra/nginx/internship-tracker.http.conf`.
-File pha 2 (HTTPS): `infra/nginx/internship-tracker.conf` — **hôm nay chưa dùng** (block 443 không nạp được khi chưa có cert).
+```powershell
+# trên Windows, tại C:\dev\internship_tracker
+scp index.html styles.css app.js favicon.svg staging:/var/www/internship-tracker/
+```
+
+Kiểm tra quyền — Nginx chạy bằng `www-data` phải đọc được:
 
 ```bash
-sudo cp /opt/internship-tracker/infra/nginx/internship-tracker.http.conf \
-        /etc/nginx/sites-available/internship-tracker
+namei -l /var/www/internship-tracker/index.html
+```
+
+**b) Site config pha 1 (HTTP only, chưa cần cert):**
+
+```powershell
+scp infra\nginx\internship-tracker.http.conf staging:/tmp/internship-tracker.http.conf
+```
+
+```bash
+sudo cp /tmp/internship-tracker.http.conf /etc/nginx/sites-available/internship-tracker
 sudo ln -sf /etc/nginx/sites-available/internship-tracker /etc/nginx/sites-enabled/internship-tracker
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t                 # phải: syntax is ok / test is successful
 sudo systemctl reload nginx
 ```
+
+File pha 2 (HTTPS) `internship-tracker.conf` — **hôm nay chưa dùng** (block 443 không nạp được khi chưa có cert).
 
 `server_name` trong file đã là `internship-tracker.duckdns.org` — **không cần `sed`**. Nếu sau này đổi host thì sửa đúng 1 dòng `server_name` trong repo rồi `scp` lại (để repo và server không lệch nhau).
 
@@ -308,14 +326,27 @@ Azure Ubuntu **không** có `iptables` chặn sẵn như Oracle — chỉ cần 
 
 ```bash
 # trên VPS
-curl -sS -H 'Host: staging.<domain>' http://127.0.0.1/health
-curl -sS -H 'Host: staging.<domain>' -o /dev/null -w '%{http_code}\n' http://127.0.0.1/
+H='Host: internship-tracker.duckdns.org'
+curl -sS -H "$H" -o /dev/null -w '/health  -> %{http_code} %{content_type}\n' http://127.0.0.1/health
+curl -sS -H "$H" http://127.0.0.1/health; echo
+curl -sS -H "$H" -o /dev/null -w '/        -> %{http_code} %{content_type}\n' http://127.0.0.1/
+curl -sS -H "$H" -o /dev/null -w '/khong-co-> %{http_code}\n' http://127.0.0.1/khong-co
+```
+
+Kỳ vọng:
+
+```text
+/health  -> 200 application/json
+{"status":"ok","service":"internship-tracker","phase":"static-http"}
+/        -> 200 text/html
+/khong-co-> 404
 ```
 
 ```powershell
-# trên Windows
-curl.exe -sS http://staging.<domain>/health     # {"status":"ok",...}
-curl.exe -I  http://staging.<domain>/           # 404
+# trên Windows — phải chạy được bằng cả IP và tên miền
+curl.exe -sS -o NUL -w "IP  / -> %{http_code}\n"        http://40.83.74.1/
+curl.exe -sS -o NUL -w "DNS / -> %{http_code}\n"        http://internship-tracker.duckdns.org/
+curl.exe -sS http://internship-tracker.duckdns.org/health
 ```
 
 `-H 'Host: ...'` là cách test Nginx khi DNS chưa lan — hiểu đúng bản chất: `server_name` so khớp **header Host**, không phải "tên miền trong DNS".
@@ -327,96 +358,74 @@ curl.exe -I  http://staging.<domain>/           # 404
 | Vẫn thấy "Welcome to nginx" | còn `sites-enabled/default` | `sudo rm -f /etc/nginx/sites-enabled/default` rồi reload |
 | `403 Forbidden` | `root` trỏ thư mục không đọc được | `namei -l <path>`, sửa `chmod`/`chown` |
 | 404 mọi đường | sai `server_name` / request vào site khác | `sudo nginx -T \| grep -n server_name` |
+| `/` 404 nhưng `/health` 200 | thiếu file trong `/var/www/internship-tracker` hoặc sai `root` | `ls -l /var/www/internship-tracker`; `sudo nginx -T \| grep -n 'root '` |
 | DNS ra IP lạ | Cloudflare proxy đang bật (cam) | đổi sang **DNS only** |
 | `curl: (6) Could not resolve` | record chưa lan / sai tên | `Resolve-DnsName`, dnschecker |
 | Timeout | cloud firewall / Oracle iptables | mục 18.4 |
 
-Ảnh: `18-dns-dig.png`, `18-curl-http.png`.
+Bằng chứng: `docs/evidence/18-curl-http.txt` (curl từ VPS + Windows, `nginx -t`, `nginx -T`), ảnh tuỳ chọn `18-curl-http.png`.
 
 ---
 
-## Ngày 19/11 (T5) — Node 22 + systemd + proxy `/health`
+## Ngày 19/11 (T5) — Deploy site tĩnh + kiểm tra sống sót sau reboot
 
-**Thời lượng:** 2h. **Deliverable:** `http://<host>/health` lấy JSON **từ app**, không phải từ Nginx.
+**Thời lượng:** 1–2h. **Deliverable:** deploy lại được bằng 1 lệnh, site + `/health` trả 200 sau khi reboot VPS.
 
-### 19.1. Cài Node 22
+> Quyết định #7: trial chạy **site tĩnh** — không cài Node, không systemd unit.
+> `infra/systemd/internship-tracker-api.service` để nguyên trong repo cho giai đoạn sau, **không dùng trong 16–29/11**.
 
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-node -v && npm -v      # v22.x
+### 19.1. Deploy lại (quy trình chuẩn)
+
+Từ Windows, tại `C:\dev\internship_tracker`:
+
+```powershell
+scp index.html styles.css app.js favicon.svg staging:/var/www/internship-tracker/
 ```
 
-### 19.2. Code + thư mục
+- Repo **Private** không ảnh hưởng cách này: máy dev đã có code, VPS không cần token GitHub.
+- Không sửa file trực tiếp trên VPS rồi quên copy về repo.
 
-```bash
-sudo mkdir -p /opt/internship-tracker
-sudo chown deploy:deploy /opt/internship-tracker
-# Đã clone ngày 18/11 -> chỉ cần: sudo -u deploy git -C /opt/internship-tracker pull --ff-only
-sudo -u deploy git clone https://github.com/<org>/<repo>.git /opt/internship-tracker
+Kiểm tra nhanh:
+
+```powershell
+curl.exe -sS -o NUL -w "%{http_code}\n" http://internship-tracker.duckdns.org/
+curl.exe -sS http://internship-tracker.duckdns.org/health
 ```
 
-Nếu repo/API chưa sẵn sàng, dùng **placeholder 10 dòng** để không bị block (thay bằng code thật ngày 23/11):
+### 19.2. Reboot test (quan trọng)
+
+Mục đích: chứng minh Nginx, ufw, fail2ban tự bật lại — không cần ai đăng nhập.
 
 ```bash
-sudo -u deploy mkdir -p /opt/internship-tracker/server/src
-sudo -u deploy tee /opt/internship-tracker/server/src/index.js >/dev/null <<'EOF'
-const http = require('node:http');
-const port = Number(process.env.PORT || 3000);
-const t0 = Date.now();
-http.createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ status: 'ok', uptime: Math.round((Date.now() - t0) / 1000) }));
-  }
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'not_found' }));
-}).listen(port, '127.0.0.1', () => console.log(`listening on 127.0.0.1:${port}`));
-EOF
+sudo reboot
 ```
 
-**Bind `127.0.0.1`, không phải `0.0.0.0`.** App chỉ cần Nginx gọi tới; bind public là mở thêm 1 cửa không ai quản lý (và Docker sau này sẽ đi xuyên ufw — xem `docs/infra.md` mục 14).
+Chờ ~60–90 giây, SSH lại:
 
-### 19.3. systemd
-
-```bash
-sudo cp /opt/internship-tracker/infra/systemd/internship-tracker-api.service /etc/systemd/system/
-sudo sed -i 's#dist/index.js#src/index.js#' /etc/systemd/system/internship-tracker-api.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now internship-tracker-api
-systemctl status --no-pager internship-tracker-api
+```powershell
+ssh staging "systemctl is-active nginx; sudo ufw status | head -1; sudo fail2ban-client status sshd | head -2; uptime -p"
 ```
 
-Chứng minh **trước khi** đụng Nginx:
+Kỳ vọng: `active` / `Status: active` / jail `sshd` / uptime vài phút.
 
-```bash
-curl -sS http://127.0.0.1:3000/health
-ss -ltnp | grep 3000        # phải thấy 127.0.0.1:3000, KHÔNG phải 0.0.0.0:3000
+Rồi test từ ngoài:
+
+```powershell
+curl.exe -sS -o NUL -w "/ -> %{http_code}\n" http://internship-tracker.duckdns.org/
+curl.exe -sS http://internship-tracker.duckdns.org/health
 ```
 
-### 19.4. Đổi `/health` sang proxy
-
-Mở `/etc/nginx/sites-available/internship-tracker`, comment 3 dòng block tĩnh, bỏ comment block `proxy_pass`, rồi:
-
-```bash
-sudo nginx -t && sudo systemctl reload nginx
-curl -sS http://staging.<domain>/health
-```
-
-Kỳ vọng JSON **không còn** `"phase":"static"` → chứng minh request đã đi qua 3 lớp: DNS → Nginx → Node.
-
-### 19.5. Lỗi hay gặp ngày 19
+### 19.3. Lỗi hay gặp
 
 | Mã | Nghĩa | Xem ngay |
 |---|---|---|
-| 502 | Nginx không gọi được app | `systemctl status`, `journalctl -u internship-tracker-api -n 50`, `ss -ltnp \| grep 3000` |
-| 504 | app treo, quá `proxy_read_timeout` | log app, thử `time curl` trực tiếp cổng 3000 |
-| 404 | app không có route `/health` | `curl 127.0.0.1:3000/health` |
-| `status=203/EXEC` | `ExecStart` sai đường dẫn | `ls -l /usr/bin/node /opt/.../src/index.js` |
-| `EADDRINUSE` | process cũ còn giữ port | `sudo ss -ltnp \| grep 3000` → `kill` hoặc `systemctl restart` |
-| App chết sau logout | chạy bằng `node` tay, không qua systemd | luôn dùng `systemctl`, không `nohup` |
+| 403 | `www-data` không đọc được file | `namei -l /var/www/internship-tracker/index.html`, `chmod 644`, `chown deploy:deploy` |
+| 404 ở `/` | thiếu `index.html` hoặc sai `root` | `ls -l /var/www/internship-tracker`; `sudo nginx -T \| grep -n 'root '` |
+| Site cũ vẫn hiện | trình duyệt cache | Ctrl+F5 / `curl -H 'Cache-Control: no-cache'` |
+| Sau reboot mất site | nginx không `enabled` | `systemctl is-enabled nginx` → `sudo systemctl enable nginx` |
+| 502/504 | không còn dùng trong trial (site tĩnh) | nếu thấy: đang nạp nhầm config phase 2/Node |
 
-Ảnh: `19-systemd.png`, `19-proxy.png` (kèm `journalctl` có dòng listen).
+Bằng chứng: `docs/evidence/19-reboot-test.txt` (log `systemctl is-active` + curl trước/sau reboot).
 
 ---
 

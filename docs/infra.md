@@ -4,7 +4,7 @@
 > Mục tiêu: dựng lại từ VPS trắng trong **≤ 30 phút**.
 > Điền hết `[TODO]` trước 28/11.
 
-**Cập nhật lần cuối:** [TODO: ngày] — người cập nhật: [TODO]
+**Cập nhật lần cuối:** 18/11/2026 — người cập nhật: bạn (infra)
 
 ---
 
@@ -85,14 +85,15 @@ systemctl is-enabled ufw    # enabled
 ```text
 browser
   → DNS (A record → IP)
-  → TCP 443 (ufw allow 443)
-  → Nginx :443 (TLS, HSTS, security headers)
-  → proxy_pass 127.0.0.1:3000
-  → Node service (systemd: internship-tracker-api)
+  → TCP 80/443 (ufw allow, NSG allow)
+  → Nginx (TLS, HSTS, security headers)
+  → đọc file trong /var/www/internship-tracker
   → response
 ```
 
-HTTP :80 chỉ tồn tại để trả `301` sang HTTPS.
+- **18–19/11:** chỉ HTTP :80, phục vụ site tĩnh (`/` → `index.html`).
+- **Từ 20/11:** HTTP :80 chỉ còn để trả `301` sang HTTPS; nội dung vẫn là 4 file tĩnh.
+- **Không có Node/systemd trong trial** — quyết định #7 (site tĩnh).
 
 ---
 
@@ -101,7 +102,7 @@ HTTP :80 chỉ tồn tại để trả `301` sang HTTPS.
 | Port | Dịch vụ | Ai cần |
 |---|---|---|
 | 22 | sshd | deploy |
-| 80 | Nginx | redirect → 443 |
+| 80 | Nginx | 18–19/11: phục vụ site tĩnh; từ 20/11: redirect → 443 |
 | 443 | Nginx | public |
 
 Kiểm tra: `sudo ufw status verbose` — **chỉ được thấy 3 port này**.
@@ -132,42 +133,44 @@ Thiếu rule ở NSG thì `curl` từ ngoài sẽ **timeout** dù `ufw` đã m�
 
 ## 5. Deploy / cập nhật code
 
-```bash
-sudo -u deploy bash -lc 'cd /opt/internship-tracker && git pull --ff-only'
-sudo -u deploy bash -lc 'cd /opt/internship-tracker/server && npm ci && npm run build'
-sudo systemctl restart internship-tracker-api
+Site tĩnh — **không build, không restart service**. Chạy trên máy dev (Windows), tại `C:\dev\internship_tracker`:
+
+```powershell
+scp index.html styles.css app.js favicon.svg staging:/var/www/internship-tracker/
 ```
 
-Hoặc: `bash /opt/internship-tracker/infra/scripts/deploy.sh`
-
-Kiểm tra: `curl -sS https://<host>/health`
+- Tạo web root lần đầu: `ssh staging "sudo mkdir -p /var/www/internship-tracker && sudo chown -R deploy:deploy /var/www/internship-tracker"`.
+- Repo Private **không ảnh hưởng**: file đi từ máy dev, VPS không cần token GitHub.
+- Kiểm tra: `curl.exe -sS http://internship-tracker.duckdns.org/health` và `curl.exe -sS -o NUL -w "%{http_code}\n" http://internship-tracker.duckdns.org/`.
 
 ---
 
 ## 6. Restart / stop service
 
 ```bash
-sudo systemctl status internship-tracker-api
-sudo systemctl restart internship-tracker-api
-sudo systemctl stop internship-tracker-api     # dùng để test alert
+sudo systemctl status nginx
+sudo systemctl reload nginx      # sau mỗi lần sửa config, sau khi nginx -t OK
+sudo systemctl stop nginx        # dùng để test alert (site chết)
+sudo systemctl start nginx
 ```
+
+`nginx -t` **trước** mọi `reload`. Không có service app nào khác trong trial.
 
 ---
 
 ## 7. Xem log
 
 ```bash
-sudo journalctl -u internship-tracker-api -n 100 --no-pager   # app
-sudo journalctl -u internship-tracker-api -f                   # follow
-sudo tail -n 100 /var/log/nginx/error.log                      # nginx
-sudo tail -n 100 /var/log/nginx/access.log
-sudo fail2ban-client status sshd                               # ssh
+sudo tail -n 100 /var/log/nginx/internship-tracker.error.log    # site
+sudo tail -n 100 /var/log/nginx/internship-tracker.access.log   # ai gọi gì
+sudo tail -n 100 /var/log/nginx/error.log                       # nginx chung
+sudo fail2ban-client status sshd                                # ssh
 ```
 
 | Triệu chứng | Xem gì trước |
 |---|---|
-| 502 Bad Gateway | `systemctl status` → `journalctl -u` → `ss -ltnp \| grep 3000` |
-| 404 toàn bộ | `nginx -T \| grep server_name`, đúng site chưa |
+| 403 Forbidden | `namei -l /var/www/internship-tracker/index.html` → `chown deploy:deploy`, `chmod 644` |
+| 404 toàn bộ | `nginx -T \| grep server_name`, đúng site chưa; `ls /var/www/internship-tracker` |
 | Trang mặc định Nginx | còn `sites-enabled/default` |
 | Cert hết hạn | `sudo certbot certificates` |
 
@@ -192,7 +195,7 @@ sudo certbot renew                 # gia hạn thật (thường timer tự làm
 
 | Tình huống | Cách làm |
 |---|---|
-| Deploy làm hỏng app | `cd /opt/internship-tracker && git log --oneline -5` → `git checkout <commit-tốt>` → build → restart |
+| Deploy làm hỏng site | Trong repo: `git checkout <commit-tốt>` → `scp` lại 4 file → Ctrl+F5 |
 | Nginx config hỏng | `sudo cp /etc/nginx/sites-available/<site>.bak /etc/nginx/sites-available/<site>` → `nginx -t` → reload |
 | Hỏng cả VPS | Snapshot provider [TODO: tên snapshot] hoặc làm mục 11 (rebuild) |
 | Mất SSH | Vào console provider → [TODO: cách] |
@@ -212,13 +215,13 @@ sudo certbot renew                 # gia hạn thật (thường timer tự làm
 ```bash
 # backup
 sudo tar czf /opt/backup/etc-$(date +%F).tar.gz \
-  /etc/nginx /etc/systemd/system/internship-tracker-api.service \
-  /etc/ssh/sshd_config.d /etc/fail2ban/jail.d
+  /etc/nginx /etc/ssh/sshd_config.d /etc/fail2ban/jail.d
+sudo tar czf /opt/backup/www-$(date +%F).tar.gz /var/www/internship-tracker
 
 # restore
 sudo tar xzf /opt/backup/etc-<ngày>.tar.gz -C /
+sudo tar xzf /opt/backup/www-<ngày>.tar.gz -C /
 sudo nginx -t && sudo systemctl reload nginx
-sudo systemctl daemon-reload && sudo systemctl restart internship-tracker-api
 ```
 
 DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đã thử restore (ghi vào đây khi làm).
@@ -237,14 +240,12 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 | 4 | Copy + chạy bootstrap | `scp -i <key> infra/bootstrap.sh deploy@IP:/tmp/` → `sudo bash /tmp/bootstrap.sh` | 6 | ☐ |
 | 5 | Test key login ở terminal mới | `ssh -i <key> deploy@IP` | 2 | ☐ |
 | 6 | Chạy hardening | `sudo bash /tmp/bootstrap.sh --harden` | 1 | ☐ |
-| 7 | Clone repo | `sudo -u deploy git clone <repo> /opt/internship-tracker` | 2 | ☐ |
+| 7 | Tạo web root + deploy 4 file tĩnh | `sudo mkdir -p /var/www/internship-tracker && sudo chown deploy:deploy ...`; `scp index.html styles.css app.js favicon.svg deploy@IP:/var/www/internship-tracker/` | 2 | ☐ |
 | 8 | Swap 2 GB (B-series chỉ 1 GiB RAM) | `fallocate -l 2G /swapfile && mkswap && swapon && ghi /etc/fstab` | 1 | ☐ |
-| 9 | Cài Node 22 | `curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo apt install -y nodejs` | 3 | ☐ |
-| 10 | Build + systemd | `npm ci && npm run build`, cài unit, `enable --now` | 4 | ☐ |
-| 11 | Nginx site | copy từ `infra/nginx/`, `nginx -t`, reload | 2 | ☐ |
-| 12 | Certbot | `certbot certonly --nginx -d <host>` rồi bật site HTTPS | 3 | ☐ |
-| 13 | Verify | `curl -I` http/https, SSL Labs, `/health` | 2 | ☐ |
-| | **Tổng** | mục tiêu ≤ 30 | **~31** | ☐ |
+| 9 | Nginx site | copy `infra/nginx/internship-tracker.http.conf`, bỏ `sites-enabled/default`, `nginx -t`, reload | 2 | ☐ |
+| 10 | Certbot | `certbot certonly --nginx -d <host>` rồi bật site HTTPS | 3 | ☐ |
+| 11 | Verify | `curl -I` http/https, SSL Labs, `/health` | 2 | ☐ |
+| | **Tổng** | mục tiêu ≤ 30 | **~25** | ☐ |
 
 Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước.
 
@@ -262,9 +263,9 @@ Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **khô
 Test lại:
 
 ```bash
-sudo systemctl stop internship-tracker-api
+sudo systemctl stop nginx
 # chờ ≥ 6 phút, xác nhận có alert
-sudo systemctl start internship-tracker-api
+sudo systemctl start nginx
 ```
 
 ---
@@ -272,13 +273,11 @@ sudo systemctl start internship-tracker-api
 ## 13. Incident checklist (khi /health đỏ)
 
 - [ ] Xác nhận từ ngoài: `curl -sS -o /dev/null -w '%{http_code}\n' https://<host>/health`
-- [ ] Phân biệt: TLS lỗi / 502 / 404 / timeout → xem bảng mục 7.
-- [ ] `systemctl status internship-tracker-api`
-- [ ] `journalctl -u internship-tracker-api -n 100 --no-pager`
-- [ ] `ss -ltnp | grep 3000` — app có listen không.
+- [ ] Phân biệt: TLS lỗi / 404 / timeout → xem bảng mục 7.
 - [ ] `systemctl status nginx`, `nginx -t`
+- [ ] `ls -l /var/www/internship-tracker` — còn đủ 4 file không.
 - [ ] `sudo ufw status` — port còn mở không.
-- [ ] `df -h` — đầy disk cũng gây 502.
+- [ ] `df -h` — đầy disk cũng gây lỗi ghi log.
 - [ ] Khôi phục → xác nhận monitor xanh → ghi lại nguyên nhân + thời gian.
 
 ---
