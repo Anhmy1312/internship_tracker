@@ -66,10 +66,6 @@ To                         Action      From
 443/tcp (v6)               ALLOW       Anywhere (v6)             
 
 
-XONG. Bắt buộc làm ngay, theo thứ tự:
-  1. Terminal MỚI:  ssh deploy@<IP>      (phải vào được)
-  2. Thử root:      ssh root@<IP>              (phải bị từ chối)
-  3. Chỉ khi (1) OK mới đóng session root/console hiện tại.
 
 Nếu (1) fail: vào console provider, sửa/xoá /etc/ssh/sshd_config.d/00-hardening.conf,
-rồi systemctl reload ssh. Đừng hoảng — ufw đã mở 22 và session cũ vẫn còn.
+rồi systemctl reload ssh. 
