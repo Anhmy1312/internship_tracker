@@ -14,7 +14,8 @@
 # Biến môi trường:
 #   DEPLOY_USER=deploy  PUBKEY_FILE=/root/id.pub  SSH_PORT=22
 #
-# CHƯA ĐƯỢC TEST THẬT — chạy thử trên VPS nháp trước khi dùng cho drill.
+# Đã kiểm chứng thủ công trên VM 16/11 (hardening, ufw, key-only).
+# Chạy end-to-end trên VPS trắng ở buổi drill 26/11.
 
 set -euo pipefail
 
@@ -121,7 +122,9 @@ AK="/home/$DEPLOY_USER/.ssh/authorized_keys"
 [[ -s "$AK" ]] || die "$AK rỗng — tắt password auth bây giờ là tự khoá mình"
 
 log "Ghi cấu hình hardening SSH"
-cat >/etc/ssh/sshd_config.d/99-hardening.conf <<EOF
+# Tên file PHẢI là 00-: sshd đọc sshd_config.d/*.conf theo thứ tự chữ cái
+# và lấy giá trị ĐẦU TIÊN. Cloud image có 50-cloud-init.conf → 99- sẽ thua.
+cat >/etc/ssh/sshd_config.d/00-hardening.conf <<EOF
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
@@ -150,6 +153,6 @@ XONG. Bắt buộc làm ngay, theo thứ tự:
   2. Thử root:      ssh root@<IP>              (phải bị từ chối)
   3. Chỉ khi (1) OK mới đóng session root/console hiện tại.
 
-Nếu (1) fail: vào console provider, sửa/xoá /etc/ssh/sshd_config.d/99-hardening.conf,
+Nếu (1) fail: vào console provider, sửa/xoá /etc/ssh/sshd_config.d/00-hardening.conf,
 rồi systemctl reload ssh. Đừng hoảng — ufw đã mở 22 và session cũ vẫn còn.
 EOF

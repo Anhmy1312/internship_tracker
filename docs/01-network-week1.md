@@ -112,13 +112,17 @@ Không cài Nginx, không cài Node, không sửa SSH. Hôm nay chỉ xác nhậ
 
 **Thời lượng:** 2h. **Deliverable:** SSH key-only, không root, firewall 22/80/443.
 
+> ✅ **Đã hoàn thành 16/11 (sớm 1 ngày)** — SSH key-only, `PermitRootLogin no`, ufw active 22/80/443, fail2ban active, `authorized_keys` đúng 2 key. Bằng chứng: `docs/evidence/17-*.png`, chi tiết trong `docs/infra.md`.
+>
+> Phần dưới giữ nguyên làm **runbook cho lần dựng lại** (drill 26/11). Ngày 17/11 dùng thời gian này để chốt Issue #1 + chuẩn bị Nginx cho 18/11.
+
 Đây là ngày **nguy hiểm nhất** (dễ tự khoá mình ra ngoài). Làm đúng thứ tự dưới đây.
 
 ### 17.1. Chuẩn bị trên máy Windows
 
 ```powershell
 scp -i "$env:USERPROFILE\.ssh\id_ed25519_it" `
-  "$env:USERPROFILE\OneDrive\Documents\Default Project\trial-a\infra\scripts\bootstrap.sh" `
+  "C:\dev\internship_tracker\infra\bootstrap.sh" `
   deploy@40.83.74.1:/tmp/
 ```
 
@@ -167,7 +171,9 @@ sudo whoami     # root
 bash /tmp/bootstrap.sh --harden
 ```
 
-`--harden` ghi `/etc/ssh/sshd_config.d/99-hardening.conf` (`PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `MaxAuthTries 3`), `sshd -t` rồi `reload` (không restart → session cũ vẫn sống).
+`--harden` ghi `/etc/ssh/sshd_config.d/00-hardening.conf` (`PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `MaxAuthTries 3`), `sshd -t` rồi `reload` (không restart → session cũ vẫn sống).
+
+> ⚠️ Tên file **phải là `00-`**, không phải `99-`: sshd đọc `sshd_config.d/*.conf` theo thứ tự chữ cái và lấy **giá trị ĐẦU TIÊN**. Cloud image đã có `50-cloud-init.conf` → file `99-` sẽ thua. Kiểm bằng `sudo sshd -T | grep -Ei 'permitrootlogin|passwordauthentication'`.
 
 ### 17.4. Chứng minh (đây là ảnh chụp cho PR)
 
@@ -202,7 +208,7 @@ ssh root@40.83.74.1              # phải bị từ chối: Permission denied (p
 Test-NetConnection 40.83.74.1 -Port 22   # TcpTestSucceeded : True
 ```
 
-Chỉ **bây giờ** mới đóng tab root. Ảnh: `17-hardening.png`.
+Chỉ **bây giờ** mới đóng tab root. Ảnh: `17-sshd-ufw-keys.png` + `17-root-denied.png`.
 
 ### 17.5. Nếu tự khoá SSH (bình tĩnh, luôn cứu được)
 

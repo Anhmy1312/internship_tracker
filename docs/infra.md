@@ -234,7 +234,7 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 | 1 | Hạ TTL DNS (làm trước ≥ 24h) | — | 0 | ☐ |
 | 2 | Tạo VPS Ubuntu 24.04 | Portal → VM → image Ubuntu 24.04, size `B2ats_v2`, **NSG mở 22/80/443**, Public IP **Static** | 5 | ☐ |
 | 3 | Trỏ DNS về IP mới | DuckDNS update bằng `curl` (mục 4) | 1 | ☐ |
-| 4 | Copy + chạy bootstrap | `scp -i <key> infra/scripts/bootstrap.sh deploy@IP:/tmp/` → `sudo bash /tmp/bootstrap.sh` | 6 | ☐ |
+| 4 | Copy + chạy bootstrap | `scp -i <key> infra/bootstrap.sh deploy@IP:/tmp/` → `sudo bash /tmp/bootstrap.sh` | 6 | ☐ |
 | 5 | Test key login ở terminal mới | `ssh -i <key> deploy@IP` | 2 | ☐ |
 | 6 | Chạy hardening | `sudo bash /tmp/bootstrap.sh --harden` | 1 | ☐ |
 | 7 | Clone repo | `sudo -u deploy git clone <repo> /opt/internship-tracker` | 2 | ☐ |
