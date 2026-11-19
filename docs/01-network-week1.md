@@ -694,6 +694,12 @@ Kỳ vọng: `200 200 200 200 200 200 429 429 ...` (burst 5 + 2r/s).
 
 > ⚠️ `/health` là JSON **hằng số** — 200 không chứng minh site còn file. Cần thêm **monitor thứ 2** vào `/` với keyword lấy từ `index.html` (giữ nguyên monitor `/health`). Đây là việc của 24/11.
 
+### 23.5. Negative test deploy.sh (theo yêu cầu review P1.3)
+
+Đã test 23/11: tắt nginx → `bash infra/scripts/deploy.sh` **exit 1** (FAIL đúng); bật lại → **exit 0** (OK). Evidence: `docs/evidence/23-deploy-negative-test.txt`.
+
+`systemd-analyze verify` báo `/usr/bin/node: No such file` — **đúng mong đợi** vì trial không cài Node; unit chỉ là template.
+
 ### 23.4. Rollback
 
 ```bash
