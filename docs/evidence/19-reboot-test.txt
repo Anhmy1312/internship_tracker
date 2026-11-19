@@ -1,0 +1,10 @@
+﻿# Day 19 - Reboot test - PASS
+# Host: vm-it-staging (40.83.74.1)
+# Ngay: 18/11/2026 (lam som)
+
+- uptime sau reboot: vai phut (Nginx/ufw/fail2ban tu bat lai)
+- GET /       -> 200 text/html (tu Windows, qua DNS)
+- GET /health -> {"status":"ok","service":"internship-tracker","phase":"static-http"}
+
+Ket luan: Reboot test PASS. Site + /health tra 200 tu ngoai
+ma khong can ai dang nhap.

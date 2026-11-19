@@ -22,7 +22,7 @@
 | Subscription ID | xem Portal → **Subscriptions** (không ghi vào repo public) |
 | Provider console URL | https://portal.azure.com → `rg-internship-tracker` → `vm-it-staging` — **đường recovery khi mất SSH** (dùng **Reset password → SSH public key** hoặc **Serial console**) |
 | Ngân sách / ai trả | Credit **$100 Azure for Students** (hết hạn 14/11/2027, **không thẻ** → không thể phát sinh phí). ~$10.8/tháng khi chạy 24/7 |
-| Người liên hệ | [TODO: tên + Discord] |
+| Người liên hệ | Trương Hoài Nam (infra) — Discord server **Trial A**, channel `#chung` / `#alert` |
 
 **Tài khoản đăng nhập:** user `deploy` (có `sudo`), **không dùng `root`**, không bật password auth.
 **SSH key (mỗi người 1 key riêng, cả 2 nằm trong `/home/deploy/.ssh/authorized_keys`):**
@@ -74,7 +74,15 @@ systemctl is-enabled ufw    # enabled
 > ⚠️ Rebuild drill (25–26/11) tạo máy mới → **host key đổi** → máy nào từng SSH sẽ báo `REMOTE HOST IDENTIFICATION HAS CHANGED`. Xoá dòng cũ: `ssh-keygen -R 40.83.74.1` rồi vào lại, so fingerprint mới (SSH sẽ tự ghi vào `known_hosts`).
 **Lệnh SSH:** `ssh staging` (alias trong `C:\Users\PC\.ssh\config`), hoặc đầy đủ `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_it" deploy@40.83.74.1`.
 
-**Nơi giữ bí mật (không nằm trong repo):** private key SSH → [TODO: password manager], token DNS → [TODO: DuckDNS account].
+**Nơi giữ bí mật (không nằm trong repo):**
+
+| Secret | Nơi lưu (Bitwarden) |
+|---|---|
+| Private key SSH (`id_ed25519_it`) | item `Trial A — SSH key` |
+| Token DuckDNS | item `Trial A — DuckDNS` |
+| Discord webhook (UptimeRobot) | item `Trial A — UptimeRobot webhook` |
+
+> ⚠️ Discord webhook đã từng xuất hiện trong ảnh chụp lúc cấu hình — nên **rotate** (xoá webhook cũ, tạo mới, cập nhật Bitwarden + UptimeRobot) trước khi bàn giao.
 
 > **Giữ credit:** khi không làm việc → Portal → VM → **Stop** → chọn **Deallocate** (Stop thường vẫn tính tiền CPU/RAM). IP tĩnh + disk vẫn giữ (~$6/tháng).
 

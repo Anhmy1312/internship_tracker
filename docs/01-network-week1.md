@@ -564,6 +564,8 @@ TLS expiry alert và "deep health" (kiểm tra cả DB) là việc của MVP tu�
 
 ## Ngày 22/11 (CN) — Commit `infra/`, PR, báo cáo
 
+> ✅ **Đã làm 19/11 (sớm 3 ngày)** — mọi file `infra/` + docs + evidence đã nằm trong **PR #4** (không tạo PR mới). Config server ↔ repo đối chiếu giống hệt; đã kiểm tra không có secret trong repo. Báo cáo tuần ở cuối mục này.
+
 **Thời lượng:** 1h. **Deliverable:** PR Week 1 + báo cáo 10 dòng.
 
 ### 22.1. Đồng bộ VPS → repo (bước ai cũng quên)
@@ -633,6 +635,29 @@ Cần bạn hỗ trợ: nội dung/trang cho site tĩnh (không cần API trong 
 Giờ đã dùng: __/10h
 Tuần sau dự kiến: API thật sau Nginx, backup/restore, runbook, rebuild drill
 ```
+
+### 22.5. Báo cáo tuần đã nộp (19/11/2026)
+
+```text
+Tuần: Trial W1 (16–22/11) — hoàn thành sớm 19/11
+Đã xong: VPS hardened, DNS A record, Nginx tĩnh /health, TLS A+ (SSL Labs),
+         HTTP→HTTPS 301, UptimeRobot + Discord alert (test trễ 6'), reboot test PASS
+PR: #4 (open, head b685e8f, 28 file) — Closes #1
+Đang làm: chờ partner review/merge; đổi repo Private; bật branch protection
+Block: PR chưa được approve (đã nhắc Anh Mỹ các ngày 17–19/11)
+Rủi ro: Discord webhook đã lộ trong lúc cấu hình → cần rotate trước bàn giao;
+        chưa tách TLS-expiry alert riêng (đã bật qua Discord integration)
+Cần bạn hỗ trợ: review + merge PR #4, đổi Private, bật branch protection (1 approval)
+Giờ đã dùng: ~6/10h (xong sớm 2 ngày so với kế hoạch)
+Tuần sau dự kiến: tuần 2 Network — rate limit Nginx, fail2ban Nginx jail,
+        backup/restore config, TLS expiry alert, rebuild drill 25–26/11
+```
+
+### 22.6. Lưu ý về PR #4
+
+- Không tạo PR mới (`infra/week1-edge`) — toàn bộ Week 1 đã gom trong **PR #4** (branch `infra/setup`) để tránh xung đột `docs/infra.md`.
+- PR có **~2316 dòng thay đổi / 28 file**, phần lớn là ảnh evidence (`docs/evidence/*.png`) — không phải code application.
+- **Không xoá branch `infra/setup`** sau merge (giữ đến hết trial).
 
 ---
 
