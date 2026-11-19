@@ -433,6 +433,8 @@ Bằng chứng: `docs/evidence/19-reboot-test.txt` (log `systemctl is-active` + 
 
 ## Ngày 20/11 (T6) — Certbot, HTTPS, headers, SSL Labs
 
+> ✅ **Đã làm 19/11 (sớm 1 ngày)** — Let's Encrypt cert còn 89 ngày, HTTP → 301, HTTPS → 200 JSON, HSTS + 3 security headers, **SSL Labs A+** (TLS 1.2 + 1.3). Bằng chứng: `docs/evidence/20-curl-https.txt`, `20-ssllabs.png`.
+
 **Thời lượng:** 2h. **Deliverable:** `https://<host>/health` 200, HTTP 301, SSL Labs ≥ A.
 
 ### 20.1. Lấy cert (test trước, thật sau)
