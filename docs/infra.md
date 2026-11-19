@@ -250,12 +250,20 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 | 6 | Chạy hardening | `sudo bash /tmp/bootstrap.sh --harden` | 1 | ☐ |
 | 7 | Tạo web root + deploy 4 file tĩnh | `sudo mkdir -p /var/www/internship-tracker && sudo chown deploy:deploy ...`; `scp index.html styles.css app.js favicon.svg deploy@IP:/var/www/internship-tracker/` | 2 | ☐ |
 | 8 | Swap 2 GB (B-series chỉ 1 GiB RAM) | `fallocate -l 2G /swapfile && mkswap && swapon && ghi /etc/fstab` | 1 | ☐ |
-| 9 | Nginx site | copy `infra/nginx/internship-tracker.http.conf`, bỏ `sites-enabled/default`, `nginx -t`, reload | 2 | ☐ |
-| 10 | Certbot | `certbot certonly --nginx -d <host>` rồi bật site HTTPS | 3 | ☐ |
-| 11 | Verify | `curl -I` http/https, SSL Labs, `/health` | 2 | ☐ |
-| | **Tổng** | mục tiêu ≤ 30 | **~25** | ☐ |
+| 9 | **Cài Nginx + Certbot** | `sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx certbot python3-certbot-nginx` — bootstrap **KHÔNG cài 2 gói này** | 3 | ☐ |
+| 10 | **Copy snippets** | `sudo mkdir -p /etc/nginx/snippets`; copy `tls.conf`, `security.conf` → `/etc/nginx/snippets/`; copy `rate-limit.conf` → `/etc/nginx/conf.d/rate-limit.conf` (zone `it_limit` nằm ở `http` context). **Thiếu = `nginx -t` fail** | 1 | ☐ |
+| 11 | Site config pha 1 (HTTP) | copy `internship-tracker.http.conf` → `/etc/nginx/sites-available/internship-tracker`; symlink `sites-enabled`; xoá `default`; `nginx -t`, reload | 2 | ☐ |
+| 12 | Certbot | `certbot certonly --nginx -d internship-tracker.duckdns.org --dry-run` rồi bỏ `--dry-run`; kiểm tra `certbot certificates` | 3 | ☐ |
+| 13 | Đổi sang config pha 2 (HTTPS) | copy `internship-tracker.conf` → `sites-available/internship-tracker`; `nginx -t`, reload | 1 | ☐ |
+| 14 | Verify thật | `curl -sS https://.../health` (đọc **body**, không chỉ `curl -I`); `curl -sS -o /dev/null -w '%{http_code}' https://.../`; HTTP phải 301; test rate limit 6 request liên tục → **429**; SSL Labs | 3 | ☐ |
+| | **Tổng** | mục tiêu ≤ 30 (thực tế có thể 35–45 do cert issuance + DuckDNS lan) | **~32** | ☐ |
 
-Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước.
+Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước. Đo **giờ thật**, đừng ước lượng.
+
+> ⚠️ Ba lỗi chỉ lộ khi rebuild từ máy trắng (đã phát hiện trước drill 25–26):
+> 1. `bootstrap.sh` **không cài nginx/certbot** → phải có bước 9.
+> 2. Thiếu `tls.conf`/`security.conf` → `include` báo file not found; thiếu `rate-limit.conf` → `zone "it_limit" does not exist`.
+> 3. Copy zone file **trước** site config, nếu không `nginx -t` fail.
 
 ---
 
@@ -296,8 +304,35 @@ curl -sS https://internship-tracker.duckdns.org/health
 
 ## 14. Việc còn nợ (ghi rõ để người sau biết)
 
-- [x] Rate limit Nginx `limit_req` — **xong 23/11**: zone `it_limit` 2r/s burst 5, `limit_req_status 503`; file `infra/nginx/snippets/rate-limit.conf` → `/etc/nginx/conf.d/rate-limit.conf`; `/health` nằm location riêng nên không bị limit; bằng chứng `docs/evidence/23-rate-limit.txt`
+- [x] Rate limit Nginx `limit_req` — **xong 23/11**: zone `it_limit` 2r/s burst 5, `limit_req_status 429`; file `infra/nginx/snippets/rate-limit.conf` → `/etc/nginx/conf.d/rate-limit.conf`; `/health` nằm location riêng nên không bị limit; bằng chứng `docs/evidence/23-rate-limit.txt`
 - [ ] fail2ban jail cho Nginx (bad bots) — dự kiến 24/11
 - [ ] Log rotation cho app
+- [ ] Tách TLS-expiry alert riêng (hiện có qua Discord integration nhưng chưa có monitor chuyên biệt)
+- [ ] API (sau 29/11): auth cho POST/PATCH/DELETE, rate limit riêng `/api/`, backup DB trước demo — auth là Week 5
+- [ ] Chọn kiến trúc client: GitHub Pages (cần CORS `https://anhmy1312.github.io`) hay phục vụ từ VM (same-origin, không cần CORS). `VITE_API_URL` là build-time → đổi URL phải build lại.
 - [ ] Docker: **port publish đi xuyên ufw** — khi thêm Docker phải bind `127.0.0.1:PORT:PORT` hoặc thêm rule `DOCKER-USER`
 - [ ] Postgres backup + restore drill
+
+---
+
+## 15. Quy trình khẩn cấp khi branch protection chặn hotfix
+
+Branch protection: `Require a pull request` + **1 approval**. Với team 2 người, nếu người kia offline → **single point of failure**.
+
+- Giữ **admin bypass** (mặc định của GitHub) — đừng tắt.
+- Khi cần hotfix mà không có reviewer:
+  1. Báo vào Discord `#chung` trước (ai, việc gì, lý do hotfix).
+  2. Dùng quyền admin để merge trực tiếp **hoặc** approve PR của chính mình bằng tài khoản admin (nếu policy cho phép).
+  3. **Ghi lại ngay** vào `#chung`: thời gian, người merge, lý do, và tạo issue theo dõi review bổ sung.
+  4. Sau khi có reviewer, mở PR nhỏ xác nhận lại thay đổi (`docs:` / `infra:`).
+
+> Không được lạm dụng bypass để bỏ review thông thường — 24h review là quy tắc của trial.
+
+## 16. Cảnh báo trước khi chuyển repo sang Private
+
+- GitHub Pages **đang bật**: `https://anhmy1312.github.io/internship_tracker/` (source `main`).
+- Trên tài khoản **Free**, chuyển repo sang **Private** sẽ **unpublish Pages**.
+- Trước khi flip: kiểm tra `github.com/settings/billing` / Student Pack xem có **GitHub Pro** không.
+  - **Có Pro** → flip Private an toàn, kiểm tra lại Pages sau khi flip.
+  - **Không có Pro** → **giữ Public** (đã scan: không secret trong repo) và bật branch protection trên public (miễn phí). Chuyển Private sau khi Pro được duyệt.
+- Nếu client được phục vụ từ Pages, UptimeRobot phải monitor cả 2 endpoint (VM + Pages) để phát hiện việc unpublish.

@@ -663,7 +663,7 @@ Tuần sau dự kiến: tuần 2 Network — rate limit Nginx, fail2ban Nginx ja
 
 ## Ngày 23/11 (T2 tuần 2) — Rate limit Nginx
 
-> ✅ **Đã làm 23/11** — `limit_req` 2r/s, burst 5, trả 503; `/health` nằm location riêng nên monitor không bị ảnh hưởng. Bằng chứng `docs/evidence/23-rate-limit.txt`.
+> ✅ **Đã làm 23/11** — `limit_req` 2r/s, burst 5, trả **429** (đổi từ 503 theo review: 503 = server error, 429 = Too Many Requests); `/health` nằm location riêng nên monitor không bị ảnh hưởng. Bằng chứng `docs/evidence/23-rate-limit.txt`.
 
 ### 23.1. Ý nghĩa
 
@@ -688,9 +688,11 @@ Chống spam / brute force / bot gọi liên tục làm nghẽn máy 1 GiB RAM. 
 for i in {1..15}; do curl -k -s -H 'Host: internship-tracker.duckdns.org' -o /dev/null -w '%{http_code} ' https://127.0.0.1/; done
 ```
 
-Kỳ vọng: `200 200 200 200 200 200 503 503 ...` (burst 5 + 2r/s).
+Kỳ vọng: `200 200 200 200 200 200 429 429 ...` (burst 5 + 2r/s).
 
 `/health` vẫn `200` mọi lần → UptimeRobot không bị ảnh hưởng.
+
+> ⚠️ `/health` là JSON **hằng số** — 200 không chứng minh site còn file. Cần thêm **monitor thứ 2** vào `/` với keyword lấy từ `index.html` (giữ nguyên monitor `/health`). Đây là việc của 24/11.
 
 ### 23.4. Rollback
 

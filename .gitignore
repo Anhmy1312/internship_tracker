@@ -2,3 +2,9 @@
 .env
 .DS_Store
 .vscode/
+
+# Secret / certificate — khong bao gio commit
+*.pem
+*.key
+*.p12
+*.pfx
