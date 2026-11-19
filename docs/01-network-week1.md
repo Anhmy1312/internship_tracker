@@ -517,6 +517,8 @@ systemctl list-timers | grep certbot
 
 ## Ngày 21/11 (T7) — Uptime monitor + alert thật
 
+> ✅ **Đã làm 19/11 (sớm 2 ngày)** — UptimeRobot monitor Keyword trên `/health` (5'), integration Discord #alert, test alert thật: stop nginx → nhận alert sau **6 phút** → start lại; cert expiry cũng được bật. Bằng chứng: `docs/evidence/21-alert.png`, chi tiết trong `docs/infra.md` mục 12.
+
 **Thời lượng:** 1h. **Deliverable:** alert tới kênh **chung**, có đo độ trễ.
 
 ### 21.1. Tạo monitor

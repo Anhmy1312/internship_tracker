@@ -255,17 +255,21 @@ Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **khô
 
 | Monitor | URL | Interval | Kênh alert |
 |---|---|---|---|
-| Health | `https://<host>/health` | 5' | [TODO: channel chung] |
-| Redirect | `http://<host>/health` (kỳ vọng 301) | 5' | [TODO] |
+| Health | `https://internship-tracker.duckdns.org/health` | 5' | Discord #alert (webhook) |
+| Redirect | `http://internship-tracker.duckdns.org/health` (kỳ vọng 301) | 5' | Discord #alert (webhook) |
 
-**Đã test alert:** [TODO: ngày] — stop service lúc [TODO], nhận alert lúc [TODO], độ trễ **[TODO] phút**.
+**Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
+
+> Webhook URL là secret — lưu trong Bitwarden (item `Trial A — UptimeRobot webhook`), **không** commit vào repo. Nếu lộ: Discord → Edit Channel → Webhooks → Delete → tạo webhook mới → cập nhật Bitwarden + UptimeRobot.
 
 Test lại:
 
 ```bash
+date -u +%FT%TZ
 sudo systemctl stop nginx
-# chờ ≥ 6 phút, xác nhận có alert
+# chờ >= 6 phút (interval 5' + 1' trễ), xác nhận có alert trong Discord #alert
 sudo systemctl start nginx
+curl -sS https://internship-tracker.duckdns.org/health
 ```
 
 ---
