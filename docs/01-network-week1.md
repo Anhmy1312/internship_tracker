@@ -661,6 +661,46 @@ Tuần sau dự kiến: tuần 2 Network — rate limit Nginx, fail2ban Nginx ja
 
 ---
 
+## Ngày 23/11 (T2 tuần 2) — Rate limit Nginx
+
+> ✅ **Đã làm 23/11** — `limit_req` 2r/s, burst 5, trả 503; `/health` nằm location riêng nên monitor không bị ảnh hưởng. Bằng chứng `docs/evidence/23-rate-limit.txt`.
+
+### 23.1. Ý nghĩa
+
+Chống spam / brute force / bot gọi liên tục làm nghẽn máy 1 GiB RAM. Khác với ufw (chặn port), rate limit **chặn tần suất request**.
+
+### 23.2. Cấu hình
+
+- Zone (http context): `infra/nginx/snippets/rate-limit.conf` → copy vào `/etc/nginx/conf.d/rate-limit.conf`
+  (Ubuntu `nginx.conf` đã `include /etc/nginx/conf.d/*.conf` trong block `http`).
+- Trong `location /` của cả 2 site config:
+  ```nginx
+  limit_req zone=it_limit burst=5 nodelay;
+  limit_req_status 503;
+  ```
+
+> ⚠️ Copy zone file **trước** site config, nếu không `nginx -t` sẽ fail (chưa có zone).
+
+### 23.3. Test (bằng chứng)
+
+```bash
+# qua HTTPS vì HTTP đã redirect 301
+for i in {1..15}; do curl -k -s -H 'Host: internship-tracker.duckdns.org' -o /dev/null -w '%{http_code} ' https://127.0.0.1/; done
+```
+
+Kỳ vọng: `200 200 200 200 200 200 503 503 ...` (burst 5 + 2r/s).
+
+`/health` vẫn `200` mọi lần → UptimeRobot không bị ảnh hưởng.
+
+### 23.4. Rollback
+
+```bash
+sudo rm /etc/nginx/conf.d/rate-limit.conf   # nhưng phải bỏ 2 dòng limit_req trong site config trước
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+---
+
 ## Cheat sheet: chứng minh từng acceptance bằng 1 lệnh
 
 | Acceptance | Lệnh | Kỳ vọng |

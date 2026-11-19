@@ -296,8 +296,8 @@ curl -sS https://internship-tracker.duckdns.org/health
 
 ## 14. Việc còn nợ (ghi rõ để người sau biết)
 
-- [ ] Rate limit Nginx `limit_req`
-- [ ] fail2ban jail cho Nginx (bad bots)
+- [x] Rate limit Nginx `limit_req` — **xong 23/11**: zone `it_limit` 2r/s burst 5, `limit_req_status 503`; file `infra/nginx/snippets/rate-limit.conf` → `/etc/nginx/conf.d/rate-limit.conf`; `/health` nằm location riêng nên không bị limit; bằng chứng `docs/evidence/23-rate-limit.txt`
+- [ ] fail2ban jail cho Nginx (bad bots) — dự kiến 24/11
 - [ ] Log rotation cho app
 - [ ] Docker: **port publish đi xuyên ufw** — khi thêm Docker phải bind `127.0.0.1:PORT:PORT` hoặc thêm rule `DOCKER-USER`
 - [ ] Postgres backup + restore drill

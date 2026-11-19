@@ -1,0 +1,13 @@
+# Day 23 - Rate limit Nginx - 23/11/2026
+# zone=it_limit rate=2r/s burst=5 nodelay, limit_req_status 503
+# Config: infra/nginx/snippets/rate-limit.conf -> /etc/nginx/conf.d/rate-limit.conf
+# Test qua HTTPS (HTTP tra 301 sang HTTPS)
+
+=== 15 request den / qua HTTPS (ky vong co 503) ===
+200 200 200 200 200 200 503 503 503 503 503 503 503 503 503 
+=== /health 6 lan qua HTTPS (ky vong deu 200 - khong bi limit) ===
+200 200 200 200 200 200 
+Body /health: {"status":"ok","service":"internship-tracker","phase":"static"}
+=== nginx -t ===
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
