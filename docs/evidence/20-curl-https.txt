@@ -1,0 +1,36 @@
+# Day 20 - TLS + HTTPS - 19/11/2026 (lam som)
+# Host: internship-tracker.duckdns.org
+# Config: infra/nginx/internship-tracker.conf + snippets/tls.conf, security.conf
+
+=== HTTP /health (mong doi 301) ===
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Thu, 19 Nov 2026 00:57:13 GMT
+Content-Type: text/html
+
+=== HTTPS /health (mong doi 200 + JSON) ===
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 19 Nov 2026 00:57:14 GMT
+Content-Type: application/json
+
+=== Body ===
+{"status":"ok","service":"internship-tracker","phase":"static"}
+
+=== ssl_verify (0 = cert OK) ===
+http=200 ssl_verify=0
+
+=== Security headers ===
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000
+
+=== Certbot ===
+Certificate Name: internship-tracker.duckdns.org
+Domains: internship-tracker.duckdns.org
+Expiry Date: 2027-02-16 23:36:47+00:00 (VALID: 89 days)
+
+=== SSL Labs ===
+Grade: A+ (TLS 1.2 + TLS 1.3)
+Anh: docs/evidence/20-ssllabs.png

@@ -1,0 +1,27 @@
+# Negative test deploy.sh - 23/11/2026
+# Yeu cau P1.3 tu review PR #4 (Anh My)
+
+Lenh: bash infra/scripts/deploy.sh (tren may dev, Git Bash)
+
+=== 1. systemd-analyze verify /tmp/internship-tracker-api.service ===
+internship-tracker-api.service: Command /usr/bin/node is not executable: No such file or directory
+VERIFY_EXIT=1
+Ghi chu: expected — trial KHONG cai Node/systemd; file chi la template de review.
+ExecStart da tro src/index.js, khong con dist/index.js.
+
+=== 2. NEGATIVE: sudo systemctl stop nginx -> chay deploy.sh ===
+==> Copy 4 file tinh -> staging:/var/www/internship-tracker
+==> Kiem tra tu ngoai (HTTPS, khong tin 301)
+curl: (28) Failed to connect to internship-tracker.duckdns.org:443
+FAIL: /health khong tra status ok (site hong hoac cert/proxy sai)
+EXIT_WHEN_DOWN=1
+
+=== 3. POSITIVE: sudo systemctl start nginx -> chay lai deploy.sh ===
+==> Copy 4 file tinh -> staging:/var/www/internship-tracker
+==> Kiem tra tu ngoai (HTTPS, khong tin 301)
+GET / -> 200
+{"status":"ok","service":"internship-tracker","phase":"static"}
+OK
+EXIT_WHEN_UP=0
+
+Ket luan: deploy.sh THAT SUC bat duoc loi HTTPS (khong con "OK" gia khi site chet).

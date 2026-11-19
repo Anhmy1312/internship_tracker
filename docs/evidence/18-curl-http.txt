@@ -1,0 +1,59 @@
+# Day 18 - Nginx phuc vu site tinh (HTTP) - 18/11/2026
+# Host: vm-it-staging (40.83.74.1)
+# Config: infra/nginx/internship-tracker.http.conf @ 93212c6
+
+== nginx ==
+nginx version: nginx/1.24.0 (Ubuntu)
+enabled
+active
+
+== nginx -t ==
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+== web root ==
+total 28
+-rw-rw-r-- 1 deploy deploy 4378 Nov 17 02:12 app.js
+-rw-rw-r-- 1 deploy deploy  248 Nov 17 02:12 favicon.svg
+-rw-rw-r-- 1 deploy deploy 5172 Nov 17 02:12 index.html
+-rw-rw-r-- 1 deploy deploy 4220 Nov 17 02:12 styles.css
+f: /var/www/internship-tracker/index.html
+drwxr-xr-x root   root   /
+drwxr-xr-x root   root   var
+drwxr-xr-x root   root   www
+drwxr-xr-x deploy deploy internship-tracker
+-rw-rw-r-- deploy deploy index.html
+
+== curl local (Host header) ==
+/health     -> 200 application/json
+{"status":"ok","service":"internship-tracker","phase":"static-http"}
+/           -> 200 text/html
+/styles.css -> 200 text/css
+/khong-co   -> 404
+
+== nginx -T (site block) ==
+	# server_names_hash_bucket_size 64;
+	# server_name_in_redirect off;
+    server_name internship-tracker.duckdns.org;   # ─æß╗òi ─æ├║ng 1 chß╗ù n├áy khi ─æß╗òi host
+    root  /var/www/internship-tracker;
+    index index.html;
+        return 200 '{"status":"ok","service":"internship-tracker","phase":"static-http"}';
+        try_files $uri $uri/ =404;
+
+== ufw ==
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW       Anywhere                  
+80/tcp                     ALLOW       Anywhere                  
+443/tcp                    ALLOW       Anywhere                  
+22/tcp (v6)                ALLOW       Anywhere (v6)             
+
+== Windows (may dev, ngoai VPS) ==
+DNS internship-tracker.duckdns.org -> 40.83.74.1
+IP   /        -> 200 text/html
+IP   /health  -> 200 application/json
+DNS  /        -> 200 text/html
+DNS  /health  -> {"status":"ok","service":"internship-tracker","phase":"static-http"}
+DNS  /khong-co -> 404
