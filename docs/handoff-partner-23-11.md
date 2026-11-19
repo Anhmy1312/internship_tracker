@@ -1,7 +1,7 @@
 # Handoff cho bên Partner — cập nhật 23/11/2026
 
 > File trao đổi ranh giới giữa 2 bên. Không chứa secret.
-> PR #4 tại thời điểm kiểm tra: **open, head `b583a1c`, 32 file, 0 review** (số file/head có thể đổi sau các commit fix review — luôn kiểm tra lại trên GitHub).
+> PR #4 (branch `infra/setup` → `main`). Head và số file thay đổi sau mỗi commit fix review — luôn kiểm tra lại trực tiếp trên GitHub trước khi approve.
 
 ## 1. Trạng thái phía infra / Trial A
 

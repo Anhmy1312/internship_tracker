@@ -255,7 +255,7 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 | 11 | Site config pha 1 (HTTP) | copy `internship-tracker.http.conf` → `/etc/nginx/sites-available/internship-tracker`; symlink `sites-enabled`; xoá `default`; `nginx -t`, reload | 2 | ☐ |
 | 12 | Certbot | `certbot certonly --nginx -d internship-tracker.duckdns.org --dry-run` rồi bỏ `--dry-run`; kiểm tra `certbot certificates` | 3 | ☐ |
 | 13 | Đổi sang config pha 2 (HTTPS) | copy `internship-tracker.conf` → `sites-available/internship-tracker`; `nginx -t`, reload | 1 | ☐ |
-| 14 | Verify thật | `curl -sS https://.../health` (đọc **body**, không chỉ `curl -I`); `curl -sS -o /dev/null -w '%{http_code}' https://.../`; HTTP phải 301; test rate limit 6 request liên tục → **429**; SSL Labs | 3 | ☐ |
+| 14 | Verify thật | `curl -sS https://.../health` (đọc **body**, không chỉ `curl -I`); `curl -sS -o /dev/null -w '%{http_code}' https://.../`; HTTP phải 301; test rate limit **15 request liên tục → 6 × 200 rồi 429** (burst 5 + 1 request đầu); SSL Labs | 3 | ☐ |
 | | **Tổng** | mục tiêu ≤ 30 (thực tế có thể 35–45 do cert issuance + DuckDNS lan) | **~32** | ☐ |
 
 Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước. Đo **giờ thật**, đừng ước lượng.

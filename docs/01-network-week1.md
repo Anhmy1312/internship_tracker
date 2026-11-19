@@ -676,7 +676,7 @@ Chống spam / brute force / bot gọi liên tục làm nghẽn máy 1 GiB RAM. 
 - Trong `location /` của cả 2 site config:
   ```nginx
   limit_req zone=it_limit burst=5 nodelay;
-  limit_req_status 503;
+  limit_req_status 429;   # 429 = Too Many Requests, KHÔNG phải 503
   ```
 
 > ⚠️ Copy zone file **trước** site config, nếu không `nginx -t` sẽ fail (chưa có zone).
@@ -694,13 +694,13 @@ Kỳ vọng: `200 200 200 200 200 200 429 429 ...` (burst 5 + 2r/s).
 
 > ⚠️ `/health` là JSON **hằng số** — 200 không chứng minh site còn file. Cần thêm **monitor thứ 2** vào `/` với keyword lấy từ `index.html` (giữ nguyên monitor `/health`). Đây là việc của 24/11.
 
-### 23.5. Negative test deploy.sh (theo yêu cầu review P1.3)
+### 23.4. Negative test deploy.sh (theo yêu cầu review P1.3)
 
 Đã test 23/11: tắt nginx → `bash infra/scripts/deploy.sh` **exit 1** (FAIL đúng); bật lại → **exit 0** (OK). Evidence: `docs/evidence/23-deploy-negative-test.txt`.
 
 `systemd-analyze verify` báo `/usr/bin/node: No such file` — **đúng mong đợi** vì trial không cài Node; unit chỉ là template.
 
-### 23.4. Rollback
+### 23.5. Rollback
 
 ```bash
 sudo rm /etc/nginx/conf.d/rate-limit.conf   # nhưng phải bỏ 2 dòng limit_req trong site config trước
