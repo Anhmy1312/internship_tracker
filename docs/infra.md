@@ -272,7 +272,10 @@ Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **khô
 | Monitor | URL | Interval | Kênh alert |
 |---|---|---|---|
 | Health | `https://internship-tracker.duckdns.org/health` | 5' | Discord #alert (webhook) |
+| Site | `https://internship-tracker.duckdns.org/` — Keyword `"Internship Tracker"` trong `index.html` | 5' | Discord #alert (webhook) |
 | Redirect | `http://internship-tracker.duckdns.org/health` (kỳ vọng 301) | 5' | Discord #alert (webhook) |
+
+> `/health` là JSON tĩnh → 200 không chứng minh site còn file. Monitor **Site** bắt trường hợp mất `index.html`; giữ nguyên monitor Health.
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
 

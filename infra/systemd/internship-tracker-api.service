@@ -1,3 +1,5 @@
+# TEMPLATE cho giai đoạn sau trial (sau 29/11).
+# Trial 16-29/11 KHÔNG cài Node/systemd — file này chỉ để review trước.
 # /etc/systemd/system/internship-tracker-api.service
 # Copy từ repo: infra/systemd/internship-tracker-api.service
 #
