@@ -388,6 +388,30 @@ curl -sS https://internship-tracker.duckdns.org/health
 - [ ] `df -h` — đầy disk cũng gây lỗi ghi log.
 - [ ] Khôi phục → xác nhận monitor xanh → ghi lại nguyên nhân + thời gian.
 
+### 13.1. Incident 19–20/11/2026 — VM shutdown 5h05m
+
+**Triệu chứng:** Discord `#alert` báo DOWN lúc **09:46 local**, UP lúc **14:52 local**, duration **5h06m** (cả `/health` lẫn `/`).
+
+**Timeline (VM log + UptimeRobot):**
+
+| Giờ local (UTC+7) | Giờ UTC | Sự kiện |
+|---|---|---|
+| 09:43 | 02:43:07 | Kernel: `hv_utils: Shutdown request received - graceful shutdown initiated` → **Azure host** gửi lệnh tắt, không phải lệnh từ trong VM (`systemctl poweroff` không xuất hiện) |
+| 09:43 | 02:43:09 | `systemd-poweroff` xong, VM tắt |
+| 09:46 | 02:46 | UptimeRobot phát hiện DOWN (Connection Timeout) |
+| 14:48 | 07:48:52 | VM boot lại (`journalctl --list-boots`, boot `63da14db…`) |
+| 14:52 | 07:52 | UptimeRobot báo UP, `down for 5 hours and 6 minutes` |
+
+**Nguyên nhân đã xác nhận một phần:** shutdown do **Azure platform/host** khởi xướng — không phải nginx, ufw, cert hay rate limit. Các lần shutdown trước đó không cố định giờ (17/11 10:41, 18/11 09:24, 19/11 18:19, 20/11 09:43 local) → nghiêng về **Stop/Deallocate thủ công để tiết kiệm credit**, nhưng cần Activity log để chốt.
+
+**Việc còn phải làm trước 29/11:**
+
+- [ ] Azure Portal (account **Anh Mỹ**) → `vm-it-staging` → **Activity log** → lọc `20/11 02:40–02:50 UTC` → xem actor là user hay policy **Auto-shutdown**.
+- [ ] Nếu có **Auto-shutdown** → **tắt ngay** trước 29/11 (VM phải sống trong demo).
+- [ ] Ghi actor/lịch shutdown vào mục này khi có kết quả.
+- [ ] Bật **Discord mobile push notification** cho `#alert` (điện thoại phải hiện thông báo) — 5 giờ không ai thấy là rủi ro cho demo. Email alert đã có nhưng chưa đủ.
+- [ ] Nguyên tắc: **không Deallocate VM khi monitor đang bật**; nếu bắt buộc tắt → Pause cả 4 monitor trước (negative test Pause đã PASS, §12).
+
 ---
 
 ## 14. Việc còn nợ (ghi rõ để người sau biết)
