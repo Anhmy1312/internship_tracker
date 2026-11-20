@@ -324,7 +324,7 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 | Monitor | URL | Interval | Kênh alert |
 |---|---|---|---|
 | Health | `https://internship-tracker.duckdns.org/health` | 5' | Discord #alert (webhook) |
-| Site | `https://internship-tracker.duckdns.org/` — Keyword `"Internship Tracker"` trong `index.html` | 5' | Discord #alert (webhook) |
+| Site | `https://internship-tracker.duckdns.org/` — Keyword `"Internship Tracker"` trong `index.html`; **Start incident when keyword does NOT exist** (keyword mất → DOWN) | 5' | Discord #alert (webhook) |
 | Redirect | `http://internship-tracker.duckdns.org/health` (kỳ vọng 301) | 5' | Discord #alert (webhook) |
 
 > `/health` là JSON tĩnh → 200 không chứng minh site còn file. Monitor **Site** bắt trường hợp mất `index.html`; giữ nguyên monitor Health.
