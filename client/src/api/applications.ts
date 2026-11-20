@@ -1,6 +1,6 @@
 import type { Application, NewApplication } from "../types";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/applications";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/applications";
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     const headers = new Headers(options.headers);

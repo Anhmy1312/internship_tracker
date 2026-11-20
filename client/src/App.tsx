@@ -33,7 +33,7 @@ function App() {
                 if (!cancelled) setApplications(data);
             } catch {
                 if (!cancelled) {
-                    setError("Could not load applications. Is json-server running?");
+                    setError("Could not load applications. Is the API running on port 3000?");
                 }
             } finally {
                 if (!cancelled) setLoading(false);
