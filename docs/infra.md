@@ -324,9 +324,9 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 3. **Thứ tự sau rebuild (IP tĩnh giữ nguyên):**
    `IP tĩnh → DNS DuckDNS → bootstrap.sh → nginx config (snippets) → deploy.sh → TLS/certbot → 3 jail fail2ban → ufw/NSG → verify /health, /, 301 → resume monitor.`
 4. **Evidence:** file `docs/evidence/25-26-drill.txt` — khi drill thật **append entry mới**, KHÔNG ghi đè (giữ lại entry dry-run 20/11).
-5. **Pause/Resume:** đúng **2 monitor đang có** (Health + Site). Redirect (301) và Pages **chưa tạo** nên không gửi alert — xem §12.
+5. **Pause/Resume:** đúng **4 monitor đang có** (Health + Site + Redirect + Pages) — tất cả đều gửi alert Discord; xem §12.
 6. **Cửa sổ Pause:** 25/11 **00:00 → 02:00** (2 giờ), rebuild xong resume + verify ngay; không pause 24h.
-7. **Negative test Pause:** Pause 2 monitor → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG** có tin mới → resume + start nginx. Nếu có tin → Pause hỏng, drill sẽ bắn alert giả.
+7. **Negative test Pause:** Pause 4 monitor → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG** có tin mới → resume + start nginx. Nếu có tin → Pause hỏng, drill sẽ bắn alert giả.
 
 ---
 
@@ -336,8 +336,8 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 |---|---|---|---|
 | Health | `https://internship-tracker.duckdns.org/health` | 5' | Discord #alert — ✅ Up |
 | Site | `https://internship-tracker.duckdns.org/` — Keyword `"Internship Tracker"` trong `index.html`; **Start incident when keyword does NOT exist** (keyword mất → DOWN) | 5' | Discord #alert — ✅ Up |
-| Redirect | `http://internship-tracker.duckdns.org/health` (kỳ vọng 301) | — | **Chưa tạo — KHÔNG gửi alert**. Thực tế chỉ có **2 monitor** (Health + Site) → Pause/Resume đúng là 2. |
-| Pages | `https://anhmy1312.github.io/internship_tracker/` | 5' | **☐ Chưa tạo** — cần tạo monitor thứ 4 để bắt unpublish Pages |
+| Redirect | `http://internship-tracker.duckdns.org/health` (kỳ vọng 301) | 5' | Discord #alert — ✅ Up (tạo 20/11) |
+| Pages | `https://anhmy1312.github.io/internship_tracker/` — Keyword `Internship Tracker`, **keyword does NOT exist** | 5' | Discord #alert — ✅ Up (tạo 20/11) |
 
 > `/health` là JSON tĩnh → 200 không chứng minh site còn file. Monitor **Site** bắt trường hợp mất `index.html`; giữ nguyên monitor Health.
 
@@ -345,22 +345,22 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 >
 > **Trạng thái 20/11 00:35 UTC:** 22/80/443 mở, `/` 200, `/health` 200 (kiểm tra cả từ ngoài). Thông tin "site down từ 18:43 19/11" là trạng thái cũ (VM đã được Start lại) — trước khi kết luận, luôn kiểm tra 3 port + HTTPS.
 >
-> **Drill 25–26/11:** Free plan không có Maintenance Window → **Pause/Resume đúng 2 monitor đang có** (Health + Site). Redirect (301) và Pages **chưa tạo** nên không gửi alert. Khung Pause đề xuất: **25/11 00:00 → 02:00** (2 giờ), rebuild xong resume ngay — không pause 24h. Ghi giờ thực tế vào bảng dưới.
+> **Drill 25–26/11:** Free plan không có Maintenance Window → **Pause/Resume đúng 4 monitor đang có** (Health + Site + Redirect + Pages). Khung Pause đề xuất: **25/11 00:00 → 02:00** (2 giờ), rebuild xong resume ngay — không pause 24h. Ghi giờ thực tế vào bảng dưới.
 
 | Sự kiện | Thời gian (UTC) | Ghi chú |
 |---|---|---|
 | Rotate webhook Discord | ✅ 20/11 01:01 UTC | Đã tạo webhook mới, cập nhật UptimeRobot, nhận alert thật trong `#alert`; ✅ đã xoá webhook cũ |
 | Monitor Site (Keyword) | ✅ 20/11 ~01:04 UTC | URL `/`, keyword `Internship Tracker`, 5'; điều kiện **keyword does NOT exist**; Discord #alert đã tick + test OK lúc 01:15 UTC |
 | Quyết định Private/Public | ✅ 20/11 — **Free** | Chủ repo `Anhmy1312` dùng GitHub **Free** (không Pro/Student Pack) → **giữ Public**, giữ branch protection, **KHÔNG flip Private** |
-| Maintenance Window drill | 25/11 **00:00 → 02:00** (UTC+7) | Free plan **không có Maintenance Window** → **Pause/Resume đúng 2 monitor đang có** (Health + Site). **Dry-run 20/11 xong**: Pause 01:50 UTC, Resume 01:57 UTC (ảnh + log). **Negative test Pause: ☐ chưa làm**. Drill thật 25–26: ☐ |
+| Maintenance Window drill | 25/11 **00:00 → 02:00** (UTC+7) | Free plan **không có Maintenance Window** → **Pause/Resume đúng 4 monitor đang có** (Health + Site). **Dry-run 20/11 xong**: Pause 01:50 UTC, Resume 01:57 UTC (ảnh + log). **Negative test Pause: ☐ chưa làm**. Drill thật 25–26: ☐ |
 
 > **20/11 01:04 UTC:** monitor Site (Keyword) tạo xong, trạng thái **Up**; monitor `/health` vẫn **Up**. Test notification lúc 01:15 UTC → Discord `#alert` nhận tin **DOWN giả + UP giả** ("was down for N/A" = dấu hiệu test, không phải sự cố thật).
 
-> **Dry-run Pause/Resume 20/11:** Pause lúc 01:50 UTC (ảnh `25-drill-paused.png`), Resume lúc 01:57 UTC (ảnh `26-drill-resumed.png`), log `25-26-drill.txt`. Drill thật 25–26/11 sẽ **append** entry mới, KHÔNG ghi đè.
+> **Dry-run Pause/Resume 20/11:** Pause lúc 01:50 UTC (ảnh `25-drill-paused.png`), Resume lúc 01:57 UTC (ảnh `26-drill-resumed.png`), log `25-26-drill.txt`. *(Lúc đó mới chỉ có 2 monitor; hiện đã có 4: Health + Site + Redirect + Pages.)* Drill thật 25–26/11 sẽ **append** entry mới, KHÔNG ghi đè.
 
-> **Pages monitor (liên kết §16):** Pages đang Public và 200 (`https://anhmy1312.github.io/internship_tracker/`), nhưng §12 **chưa có monitor Pages** → ☐ cần tạo (Keyword `Internship Tracker`, 5', Discord #alert). Trước khi tạo: **chấp nhận rủi ro** không phát hiện Pages bị unpublish.
+> **Pages monitor (liên kết §16):** Pages đang Public và 200 (`https://anhmy1312.github.io/internship_tracker/`). Monitor Pages (keyword `Internship Tracker`, điều kiện **keyword does NOT exist**, 5', Discord) đã tạo lúc 20/11 và **Up** — không còn rủi ro unpublish không biết.
 
-> **Negative test Pause (bắt buộc, ☐ chưa làm):** Pause 2 monitor → `sudo systemctl stop nginx` → chờ **7 phút** → Discord `#alert` **KHÔNG** được có tin mới → Resume + `sudo systemctl start nginx`. Nếu có tin → Pause không hoạt động, drill 25/11 sẽ bắn alert giả. Evidence sẽ lưu tại `docs/evidence/20-negative-pause.txt`.
+> **Negative test Pause (bắt buộc, ☐ chưa làm):** Pause 4 monitor → `sudo systemctl stop nginx` → chờ **7 phút** → Discord `#alert` **KHÔNG** được có tin mới → Resume + `sudo systemctl start nginx`. Nếu có tin → Pause không hoạt động, drill 25/11 sẽ bắn alert giả. Evidence sẽ lưu tại `docs/evidence/20-negative-pause.txt`.
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
 
@@ -430,4 +430,4 @@ Branch protection: `Require a pull request` + **1 approval**. Với team 2 ngư�
 
 > **Quyết định 20/11/2026:** account chủ repo `Anhmy1312` là **GitHub Free** (partner xác nhận, không Pro/Student Pack). Vì Pages đang bật → **giữ repo Public**, **không flip Private**. Branch protection trên public vẫn giữ nguyên; secret scan sạch. Nếu sau này có Pro mới xem lại.
 
-- Nếu client được phục vụ từ Pages, UptimeRobot phải monitor cả 2 endpoint (VM + Pages) để phát hiện việc unpublish. **Hiện đã giữ Public + Pages (200), nhưng monitor Pages ở §12 ☐ chưa tạo — rủi ro chấp nhận tạm, cần tạo monitor thứ 4 (`anhmy1312.github.io/internship_tracker/`).**
+- Nếu client được phục vụ từ Pages, UptimeRobot phải monitor cả 2 endpoint (VM + Pages) để phát hiện việc unpublish. **Hiện đã giữ Public + Pages (200) và monitor Pages ở §12 đã ✅ Up (tạo 20/11).**
