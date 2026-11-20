@@ -387,7 +387,7 @@ Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `doc
 
 > **Negative test Pause ✅ PASS 20/11:** Pause 4 monitor lúc 08:41:51 UTC → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG có tin mới** (tin cuối vẫn là 14:52 local) → start nginx lúc 08:48:53 UTC → Resume 4 monitor. Verify: nginx active, `/health` 200, `/` 200. Evidence: `docs/evidence/20-negative-pause.txt`. Drill 25/11 có thể Pause an toàn.
 
-> **Alert contacts — chốt 20/11:** email `namtruong0331@gmail.com` (event: Up + Down) **đã verify và nhận test notification thành công**; **Discord integration #1** được tick trên **cả 4 monitor** (đã kiểm tra từng monitor qua UI). Test gửi cả 2 kênh cùng lúc → email + Discord đều nhận. Cấu hình email tổng tại `dashboard.uptimerobot.com/account/notifications`. SMS/Voice không dùng (cần plan trả phí).
+> **Alert contacts — chốt 20/11:** email của Nam (lưu Bitwarden) (event: Up + Down) **đã verify và nhận test notification thành công**; **Discord integration #1** được tick trên **cả 4 monitor** (đã kiểm tra từng monitor qua UI). Test gửi cả 2 kênh cùng lúc → email + Discord đều nhận. Cấu hình email tổng tại `dashboard.uptimerobot.com/account/notifications`. SMS/Voice không dùng (cần plan trả phí).
 
 ### 12.1. Trực #alert 28–29/11 (SLA 15 phút)
 
@@ -397,6 +397,9 @@ Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `doc
 | 29/11 08:00 → demo xong | **Anh Mỹ** | Như trên; là đầu mối trong buổi demo |
 
 - Quá **15 phút** không ai xác nhận → **gọi điện** cho người còn lại (Discord có thể bị trễ/điện thoại tắt thông báo).
+- **⚠️ Quyền Start VM:** Nam trực đêm nhưng hiện **chỉ account Azure Anh Mỹ bật được VM**; có SSH cũng không cứu được nếu VM bị deallocate. Trước **23/11** phải chốt một trong hai:
+  - Anh Mỹ add Nam role **Virtual Machine Contributor** trên `vm-it-staging` (☐), **hoặc**
+  - **Đóng băng VM** (không deallocate) đến hết demo 29/11 (☐).
 - Discord **mobile push** cho `#alert` phải bật trước 29/11 (xem §13.1). Email là kênh dự phòng đã verify.
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
@@ -443,8 +446,9 @@ curl -sS https://internship-tracker.duckdns.org/health
 
 **Việc còn phải làm trước 29/11:**
 
-- [ ] Azure Portal (account **Anh Mỹ**) → `vm-it-staging` → **Activity log** → lọc `20/11 02:40–02:50 UTC` → xem actor là user hay policy **Auto-shutdown**.
+- [ ] Azure Portal (account **Anh Mỹ**) → `vm-it-staging` → **Activity log** → kiểm tra **cả 4 lần shutdown trong 4 ngày** (17/11 10:41, 18/11 09:24, 19/11 18:19, 20/11 09:43 local) → xem **Caller** là user hay policy **Auto-shutdown**. Partner đang check hôm nay.
 - [ ] Nếu có **Auto-shutdown** → **tắt ngay** trước 29/11 (VM phải sống trong demo).
+- [ ] Từ giờ đến demo: **không ai deallocate VM**. Nếu cần tiết kiệm credit → dùng **budget alert**, không tắt VM.
 - [ ] Ghi actor/lịch shutdown vào mục này khi có kết quả.
 - [ ] Bật **Discord mobile push notification** cho `#alert` (điện thoại phải hiện thông báo) — 5 giờ không ai thấy là rủi ro cho demo. Email alert đã có nhưng chưa đủ.
 - [ ] Nguyên tắc: **không Deallocate VM khi monitor đang bật**; nếu bắt buộc tắt → Pause cả 4 monitor trước (negative test Pause đã PASS, §12).
@@ -490,5 +494,7 @@ Branch protection: `Require a pull request` + **1 approval**. Với team 2 ngư�
   - **Không có Pro** → **giữ Public** (đã scan: không secret trong repo) và bật branch protection trên public (miễn phí). Chuyển Private sau khi Pro được duyệt.
 
 > **Quyết định 20/11/2026:** account chủ repo `Anhmy1312` là **GitHub Free** (partner xác nhận, không Pro/Student Pack). Vì Pages đang bật → **giữ repo Public**, **không flip Private**. Branch protection trên public vẫn giữ nguyên; secret scan sạch. Nếu sau này có Pro mới xem lại.
+
+> **PII scan 20/11:** repo Public đã rà lại. Email cá nhân + email trường (kèm MSSV) trong `docs/` thay bằng **“email của Nam — lưu Bitwarden”**; ảnh `15-nsg.png` đã crop bỏ thanh account Azure (lộ email trường + MSSV). Các ảnh evidence còn lại đã kiểm tra, không chứa email/MSSV. Trước PR close-out phải scan lại một lần nữa.
 
 - Nếu client được phục vụ từ Pages, UptimeRobot phải monitor cả 2 endpoint (VM + Pages) để phát hiện việc unpublish. **Hiện đã giữ Public + Pages (200) và monitor Pages ở §12 đã ✅ Up (tạo 20/11).**
