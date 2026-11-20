@@ -339,7 +339,7 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 |---|---|---|
 | Rotate webhook Discord | ✅ 20/11 01:01 UTC | Đã tạo webhook mới, cập nhật UptimeRobot, nhận alert thật trong `#alert`; ✅ đã xoá webhook cũ |
 | Monitor Site (Keyword) | ✅ 20/11 ~01:04 UTC | URL `/`, keyword `Internship Tracker`, 5'; điều kiện **keyword does NOT exist**; Discord #alert đã tick + test OK lúc 01:15 UTC |
-| Quyết định Private/Public | ☐ __/11 | Pro → Private + check Pages 200 trong 10'; Free → giữ Public |
+| Quyết định Private/Public | ✅ 20/11 — **Free** | Chủ repo `Anhmy1312` dùng GitHub **Free** (không Pro/Student Pack) → **giữ Public**, giữ branch protection, **KHÔNG flip Private** |
 | Maintenance Window drill | 25/11 00:00 → 26/11 00:00 (UTC+7) | Free plan **không có Maintenance Window** (crown/Upgrade) → **Pause/Resume cả 2 monitor**. **Dry-run 20/11 xong**: Pause 01:50 UTC, Resume 01:57 UTC (ảnh + log trong evidence). Drill thật 25–26: ☐ |
 
 > **20/11 01:04 UTC:** monitor Site (Keyword) tạo xong, trạng thái **Up**; monitor `/health` vẫn **Up**. Test notification lúc 01:15 UTC → Discord `#alert` nhận tin **DOWN giả + UP giả** ("was down for N/A" = dấu hiệu test, không phải sự cố thật).
@@ -411,4 +411,7 @@ Branch protection: `Require a pull request` + **1 approval**. Với team 2 ngư�
 - Trước khi flip: kiểm tra `github.com/settings/billing` / Student Pack xem có **GitHub Pro** không.
   - **Có Pro** → flip Private an toàn, kiểm tra lại Pages sau khi flip.
   - **Không có Pro** → **giữ Public** (đã scan: không secret trong repo) và bật branch protection trên public (miễn phí). Chuyển Private sau khi Pro được duyệt.
+
+> **Quyết định 20/11/2026:** account chủ repo `Anhmy1312` là **GitHub Free** (partner xác nhận, không Pro/Student Pack). Vì Pages đang bật → **giữ repo Public**, **không flip Private**. Branch protection trên public vẫn giữ nguyên; secret scan sạch. Nếu sau này có Pro mới xem lại.
+
 - Nếu client được phục vụ từ Pages, UptimeRobot phải monitor cả 2 endpoint (VM + Pages) để phát hiện việc unpublish.
