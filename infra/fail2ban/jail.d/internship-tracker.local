@@ -1,0 +1,38 @@
+# /etc/fail2ban/jail.d/internship-tracker.local
+# Jail cho Nginx site tĩnh — Day 24 (làm sớm 20/11).
+#
+# Copy:
+#   sudo install -m 644 -o root -g root \
+#     infra/fail2ban/jail.d/internship-tracker.local /etc/fail2ban/jail.d/
+#
+# backend=polling: Debian/Ubuntu đặt backend=systemd toàn cục, nhưng nginx
+# ghi error/access log ra file. Nếu để systemd, fail2ban đọc journal và
+# KHÔNG thấy dòng "limiting requests" → jail không bao giờ bắt được.
+#
+# ignoreip: không ban localhost (curl/health check từ chính VM).
+# Jail chỉ chặn port 80/443 — SSH 22 không bị ảnh hưởng.
+
+[nginx-limit-req]
+# IP nào liên tục bị 429 (vượt rate limit 2r/s) → ban 1 giờ.
+enabled  = true
+backend  = polling
+port     = http,https
+filter   = nginx-limit-req
+logpath  = /var/log/nginx/internship-tracker.error.log
+maxretry = 5
+findtime = 60
+bantime  = 3600
+ignoreip = 127.0.0.1/8 ::1
+
+[nginx-botsearch]
+# Bot quét path khai thác (wp-login.php, phpmyadmin, cgi-bin, mysqladmin...)
+# trả 404 → ban 24 giờ. Filter có sẵn của fail2ban (botsearch-common.conf).
+enabled  = true
+backend  = polling
+port     = http,https
+filter   = nginx-botsearch
+logpath  = /var/log/nginx/internship-tracker.access.log
+maxretry = 3
+findtime = 600
+bantime  = 86400
+ignoreip = 127.0.0.1/8 ::1

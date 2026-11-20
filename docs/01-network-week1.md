@@ -709,6 +709,71 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ---
 
+## Ngày 24/11 (T3 tuần 2) — Fail2ban Nginx + log rotation
+
+> ✅ **Đã làm sớm 20/11** — 3 jail (`sshd`, `nginx-limit-req`, `nginx-botsearch`), ban thật bằng 429 và 404 bot, logrotate chạy. Bằng chứng `docs/evidence/24-fail2ban-nginx.txt`.
+
+### 24.1. Ý nghĩa
+
+- Rate limit (Day 23) chỉ **làm chậm** IP lạm dụng; fail2ban **chặn hẳn** port 80/443 trong 1h (429) hoặc 24h (bot quét path).
+- Log rotation giữ `/var/log/nginx` không phình to (VM 1 GiB RAM, disk 29 GB).
+
+### 24.2. Cấu hình
+
+- File: `infra/fail2ban/jail.d/internship-tracker.local` → `/etc/fail2ban/jail.d/`.
+- `backend = polling`: Ubuntu mặc định `systemd`; nginx ghi log ra file, không phải journal.
+- `ignoreip = 127.0.0.1/8 ::1`: curl/health check nội bộ không bị ban.
+- Jail chỉ chặn `http,https`; SSH 22 không bị ảnh hưởng.
+
+```bash
+scp -i <key> infra/fail2ban/jail.d/internship-tracker.local deploy@IP:/tmp/
+ssh -i <key> deploy@IP "sudo install -m 644 -o root -g root /tmp/internship-tracker.local /etc/fail2ban/jail.d/ && sudo fail2ban-client -t && sudo systemctl restart fail2ban && sudo fail2ban-client status"
+```
+
+Kỳ vọng: `Number of jail: 3` (sshd + 2 jail Nginx).
+
+### 24.3. Test (bằng chứng)
+
+```bash
+# 429 → ban (chạy từ VM qua hostname; unban ngay)
+for i in {1..20}; do curl -s -o /dev/null -w '%{http_code} ' --max-time 5 https://<host>/; done; echo
+sudo fail2ban-client status nginx-limit-req
+sudo fail2ban-client set nginx-limit-req unbanip <IP>
+
+# 404 bot → ban 24h
+for i in 1 2 3; do curl -s -o /dev/null -w '%{http_code}\n' https://<host>/wp-login.php; done
+sudo fail2ban-client status nginx-botsearch
+sudo fail2ban-client set nginx-botsearch unbanip <IP>
+```
+
+Kết quả thật: `nginx-limit-req` ban `40.83.74.1`; `nginx-botsearch` ban `104.28.205.74`; sau unban cả 2 về 0.
+
+> Không test bằng `127.0.0.1` vì nằm trong `ignoreip`; test từ VM qua hostname sẽ ban IP công khai của chính VM, không ảnh hưởng người dùng thật.
+
+### 24.4. Log rotation
+
+```bash
+sudo logrotate -d /etc/logrotate.d/nginx     # dry-run
+sudo logrotate -f /etc/logrotate.d/nginx     # xoay thật
+ls -lh /var/log/nginx/internship-tracker.*   # phải có .1 + .2.gz
+sudo nginx -t && sudo systemctl reload nginx
+df -h /
+```
+
+Không tạo entry logrotate trùng đường dẫn (`duplicate log entry`).
+
+### 24.5. Rollback
+
+```bash
+sudo rm /etc/fail2ban/jail.d/internship-tracker.local
+sudo systemctl restart fail2ban
+sudo fail2ban-client status   # còn sshd
+```
+
+Log rotation là config của package nginx — không cần rollback; nếu lỡ sửa `/etc/logrotate.d/nginx` thì cài lại `nginx-common` để lấy file gốc.
+
+---
+
 ## Cheat sheet: chứng minh từng acceptance bằng 1 lệnh
 
 | Acceptance | Lệnh | Kỳ vọng |
@@ -725,14 +790,16 @@ sudo nginx -t && sudo systemctl reload nginx
 | DNS đúng | `Resolve-DnsName <host> -Type A` | đúng IP |
 | Site tĩnh đủ file | `ls -l /var/www/internship-tracker` | 4 file, `www-data` đọc được |
 | 404 vẫn có header | `curl.exe -I https://<host>/khong-co` | 404 + 4 header |
+| Fail2ban Nginx | `sudo fail2ban-client status` | 3 jail: sshd, nginx-limit-req, nginx-botsearch |
+| Log rotation | `sudo logrotate -d /etc/logrotate.d/nginx` | có `.1`/`.2.gz`, không lỗi |
 
 ---
 
 ## 8. Nếu tuần này trễ tiến độ — cắt theo thứ tự này
 
-1. Rate limit (`limit_req`) — tuần 2.
-2. fail2ban jail cho Nginx — tuần 2.
-3. Log rotation — tuần 2.
+1. Rate limit (`limit_req`) — ✅ xong 23/11.
+2. fail2ban jail cho Nginx — ✅ xong 20/11.
+3. Log rotation — ✅ xong 20/11.
 4. Monitor thứ 2 (redirect) — bỏ được.
 5. **Không bao giờ cắt:** TLS + redirect, firewall, SSH hardening, alert thật, runbook, PR.
 

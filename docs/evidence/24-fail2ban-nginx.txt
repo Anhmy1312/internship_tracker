@@ -1,0 +1,137 @@
+# Fail2ban Nginx + log rotation — 20/11/2026 (làm sớm, kế hoạch 24/11)
+
+Máy: Windows dev → `ssh staging` (40.83.74.1, Ubuntu 24.04, nginx 1.24.0, fail2ban 1.0.2).
+Cấu hình: `infra/fail2ban/jail.d/internship-tracker.local`.
+
+## 1. Cài jail + test config
+
+```text
+scp infra/fail2ban/jail.d/internship-tracker.local staging:/tmp/
+sudo install -m 644 -o root -g root /tmp/internship-tracker.local /etc/fail2ban/jail.d/
+sudo fail2ban-client -t
+OK: configuration test is successful
+
+sudo systemctl restart fail2ban
+sudo fail2ban-client status
+Status
+|- Number of jail:      3
+`- Jail list:   nginx-botsearch, nginx-limit-req, sshd
+```
+
+Lý do `backend = polling`: Debian/Ubuntu đặt `backend = systemd` toàn cục, nhưng nginx ghi
+`internship-tracker.error.log` / `.access.log` ra file. Để `systemd` thì fail2ban đọc journal
+và không thấy dòng `limiting requests` → jail không bắt được.
+
+## 2. Filter test trên log cũ (chưa ban)
+
+```text
+sudo fail2ban-regex /var/log/nginx/internship-tracker.error.log.1 \
+  /etc/fail2ban/filter.d/nginx-limit-req.conf
+Lines: 223 lines, 0 ignored, 27 matched, 196 missed
+```
+
+27 dòng `limiting requests` của lần test rate limit 23/11 khớp filter.
+
+## 3. Test thật — botsearch (404 path khai thác)
+
+```text
+curl https://internship-tracker.duckdns.org/wp-login.php   # 3 lần → 404
+
+sudo fail2ban-client status nginx-botsearch
+|- Filter
+|  |- Currently failed: 1
+|  |- Total failed:     4
+|  `- File list:        /var/log/nginx/internship-tracker.access.log
+`- Actions
+   |- Currently banned: 1
+   |- Total banned:     1
+   `- Banned IP list:  104.28.205.74
+
+sudo nft list tables
+table inet f2b-table
+
+sudo fail2ban-client set nginx-botsearch unbanip 104.28.205.74
+1
+# sau unban: Currently banned: 0
+```
+
+Sau unban: `curl /` → 200, `curl /health` → 200.
+
+## 4. Test thật — nginx-limit-req (429 → ban)
+
+Chạy 20 request từ chính VM qua hostname công khai (IP nguồn `40.83.74.1`, KHÔNG phải
+`127.0.0.1` vì localhost nằm trong `ignoreip`):
+
+```text
+for i in {1..20}; do curl -s -o /dev/null -w '%{http_code} ' --max-time 5 \
+  https://internship-tracker.duckdns.org/; done
+
+Kết quả (concatenated): 200200200200200200200200200200429429200429429429200000000000
+# 200 → 429 khi vượt 2r/s burst 5 → 000 khi IP bị nftables chặn
+
+sudo fail2ban-client status nginx-limit-req
+|- Filter
+|  |- Currently failed: 0
+|  |- Total failed:     5
+|  `- File list:        /var/log/nginx/internship-tracker.error.log
+`- Actions
+   |- Currently banned: 1
+   |- Total banned:     1
+   `- Banned IP list:   40.83.74.1
+
+sudo fail2ban-client set nginx-limit-req unbanip 40.83.74.1
+1
+# sau unban: Currently banned: 0
+```
+
+## 5. Log rotation (stock nginx logrotate)
+
+```text
+sudo logrotate -d /etc/logrotate.d/nginx
+rotating pattern: /var/log/nginx/*.log  after 1 days (14 rotations)
+empty log files are not rotated, old logs are removed
+...
+log does not need rotating (log has already been rotated)
+
+sudo logrotate -f /etc/logrotate.d/nginx
+FORCE_EXIT=0
+
+ls -lh /var/log/nginx/internship-tracker.*
+-rw-r----- 1 www-data adm    0    Nov 20 00:38 internship-tracker.access.log
+-rw-r----- 1 www-data adm  4.7K   Nov 20 00:37 internship-tracker.access.log.1
+-rw-r----- 1 www-data adm   11K   Nov 20 00:32 internship-tracker.access.log.2.gz
+-rw-r--r-- 1 root     root  862    Nov 18 02:14 internship-tracker.access.log.3.gz
+-rw-r----- 1 www-data adm    0    Nov 20 00:38 internship-tracker.error.log
+-rw-r----- 1 www-data adm  1.1K   Nov 20 00:37 internship-tracker.error.log.1
+-rw-r--r-- 1 www-data root 2.3K   Nov 19 10:24 internship-tracker.error.log.2.gz
+
+systemctl is-active nginx
+active
+
+df -h /
+/dev/root  29G  4.7G  24G  17% /
+```
+
+Nginx package đã có `/etc/logrotate.d/nginx`:
+`daily`, `rotate 14`, `compress`, `delaycompress`, `notifempty`, `create 0640 www-data adm`,
+`postrotate: invoke-rc.d nginx rotate`. Không tạo file logrotate trùng vì sẽ báo
+"duplicate log entry".
+
+## 6. Trạng thái cuối (2026-11-20T00:38:19Z)
+
+```text
+sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+sudo systemctl reload nginx   → exit 0
+sudo fail2ban-client banned
+[{'sshd': []}, {'nginx-limit-req': []}, {'nginx-botsearch': []}]
+
+curl -sS https://internship-tracker.duckdns.org/health
+{"status":"ok","service":"internship-tracker","phase":"static"}
+
+curl https://internship-tracker.duckdns.org/  → 200
+```
+
+Kết luận: 3 jail active; ban thật bằng cả 429 và 404 bot; log rotation chạy; không còn IP bị ban.
