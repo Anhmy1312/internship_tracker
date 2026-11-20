@@ -1,28 +1,42 @@
-# Internship Tracker — API
+﻿# Internship Tracker — API
 
-Local mock API powered by `json-server`. Week 4 replaces this with Express + PostgreSQL.
+Express 5 + PostgreSQL (Neon) API for the Internship Application Tracker.
 
 ## Run
 
-```bash
-cd server
-npm install
-npm run api
-```
+    cd server
+    npm install
+    cp .env.example .env   # dien DATABASE_URL
+    npm run dev            # http://127.0.0.1:3000
 
-The API runs at:
+Production:
 
-```text
-http://localhost:3001/applications
-```
+    npm start
+
+The API runs at http://127.0.0.1:3000.
 
 ## Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/applications` | List all applications |
-| `POST` | `/applications` | Create an application |
-| `PATCH` | `/applications/:id` | Update part of an application |
-| `DELETE` | `/applications/:id` | Delete an application |
+| Method | Path | Body | Success | Loi |
+|---|---|---|---|---|
+| GET | /health | — | 200 JSON | — |
+| GET | /applications | — | 200 array | 500 |
+| GET | /applications/:id | — | 200 object | 400, 404 |
+| POST | /applications | JSON | 201 object | 400 |
+| PATCH | /applications/:id | JSON | 200 object | 400, 404 |
+| DELETE | /applications/:id | — | 204 | 400, 404 |
 
-Data is stored in `db.json`.
+user_id lay tu DEMO_USER_ID (Week 4 chua co auth). Tat ca query loc user_id truoc.
+
+## Environment
+
+Xem .env.example: DATABASE_URL, PORT (3000), CORS_ORIGIN (http://localhost:5173), API_VERSION, DEMO_USER_ID.
+
+## Scripts
+
+| Lenh | Mo ta |
+|---|---|
+| npm run dev | node --watch src/index.js |
+| npm start | production |
+| npm run db:check | kiem ket noi DB |
+| npm run db:setup | apply schema |
