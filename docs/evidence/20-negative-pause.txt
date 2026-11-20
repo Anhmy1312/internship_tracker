@@ -1,0 +1,34 @@
+# Negative test Pause — 20/11/2026
+
+Mục đích: chứng minh việc **Pause monitor** trên UptimeRobot thực sự chặn alert giả
+khi chúng ta chủ động làm site chết trong lúc drill rebuild.
+
+## Diễn biến
+
+| Thời gian (local = UTC+7) | Hành động |
+|---|---|
+| 15:41:51 (08:41:51 UTC) | Pause cả **4 monitor** qua UptimeRobot UI: `internship-tracker pages`, `internship-tracker redirect`, `internship-tracker site`, `internship-tracker.duckdns.org/health`. Current status: `0 Down / 0 Up / 4 Paused`. |
+| 15:41:51 | Trên VM: `sudo systemctl stop nginx` |
+| 15:41–15:49 | Chờ **420 giây (7 phút)** — vượt interval 5 phút của monitor |
+| Trong khung đó | Discord `#alert` **KHÔNG có tin mới**. Tin cuối cùng trước test là lúc **14:52** (UP sau sự cố 09:46–14:52). Không có tin DOWN/UP nào sinh ra lúc nginx đang tắt. |
+| 15:48:53 (08:48:53 UTC) | `sudo systemctl start nginx` |
+
+## Verify sau khi start nginx
+
+```text
+systemctl is-active nginx  -> active
+curl -sS https://internship-tracker.duckdns.org/health
+  -> {"status":"ok","service":"internship-tracker","phase":"static"}
+curl -sS -o /dev/null -w "%{http_code}" https://internship-tracker.duckdns.org/
+  -> 200
+```
+
+Sau đó **Resume cả 4 monitor** qua UI; trạng thái chuyển từ `Preparing...` sang `Up`.
+
+## Kết luận
+
+**PASS** — Pause hoạt động đúng: nginx chết 7 phút nhưng Discord `#alert` không nhận alert giả.
+Drill rebuild 25–26/11 có thể Pause 4 monitor trong khung 00:00–02:00 an toàn.
+
+> Lưu ý: các tin DOWN lúc 09:46 và UP lúc 14:52 là sự cố thật trước đó (site chết 5h06m),
+> không phải do negative test này.
