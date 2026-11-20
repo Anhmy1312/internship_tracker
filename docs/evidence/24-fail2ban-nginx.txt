@@ -117,6 +117,10 @@ Nginx package đã có `/etc/logrotate.d/nginx`:
 `postrotate: invoke-rc.d nginx rotate`. Không tạo file logrotate trùng vì sẽ báo
 "duplicate log entry".
 
+Sau khi rotate, gửi 1 request `/wp-login.php` → `nginx-botsearch` báo
+`Currently failed: 2`, `Total failed: 5`, `Currently banned: 0` — jail vẫn đọc file log mới,
+chưa đủ 3 lần nên không ban.
+
 ## 6. Trạng thái cuối (2026-11-20T00:38:19Z)
 
 ```text
