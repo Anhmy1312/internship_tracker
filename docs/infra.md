@@ -338,9 +338,11 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 | Sự kiện | Thời gian (UTC) | Ghi chú |
 |---|---|---|
 | Rotate webhook Discord | ✅ 20/11 01:01 UTC | Đã tạo webhook mới, cập nhật UptimeRobot, nhận alert thật trong `#alert`; ✅ đã xoá webhook cũ |
-| Monitor Site (Keyword) | ☐ __/11 __:__ | URL `/`, keyword `Internship Tracker`, 5'; chờ trạng thái Up |
+| Monitor Site (Keyword) | ✅ 20/11 ~01:04 UTC | URL `/`, keyword `Internship Tracker`, 5'; điều kiện **keyword does NOT exist**; Discord #alert đã tick + test OK lúc 01:15 UTC |
 | Quyết định Private/Public | ☐ __/11 | Pro → Private + check Pages 200 trong 10'; Free → giữ Public |
 | Maintenance Window drill | ☐ 25/11 __:__ → 26/11 __:__ | Pause/mute cả Health + Site; resume sau khi verify xong |
+
+> **20/11 01:04 UTC:** monitor Site (Keyword) tạo xong, trạng thái **Up**; monitor `/health` vẫn **Up**. Test notification lúc 01:15 UTC → Discord `#alert` nhận tin **DOWN giả + UP giả** ("was down for N/A" = dấu hiệu test, không phải sự cố thật).
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
 
