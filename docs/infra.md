@@ -338,6 +338,8 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 | Sự kiện | Thời gian (UTC) | Ghi chú |
 |---|---|---|
 | Rotate webhook Discord | ☐ __/11 __:__ | URL cũ từng xuất hiện trong log chat; tạo mới → cập nhật UptimeRobot → test → xoá cũ |
+| Monitor Site (Keyword) | ☐ __/11 __:__ | URL `/`, keyword `Internship Tracker`, 5'; chờ trạng thái Up |
+| Quyết định Private/Public | ☐ __/11 | Pro → Private + check Pages 200 trong 10'; Free → giữ Public |
 | Maintenance Window drill | ☐ 25/11 __:__ → 26/11 __:__ | Pause/mute cả Health + Site; resume sau khi verify xong |
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
@@ -384,6 +386,10 @@ curl -sS https://internship-tracker.duckdns.org/health
 ## 15. Quy trình khẩn cấp khi branch protection chặn hotfix
 
 Branch protection: `Require a pull request` + **1 approval**. Với team 2 người, nếu người kia offline → **single point of failure**.
+
+**Trạng thái 19/11/2026** (partner bật qua UI, tài khoản admin): `main.protected = true`. Token infra chỉ có quyền `write` nên `GET /branches/main/protection` trả 404 và `/rulesets` trả rỗng — không tự verify chi tiết bằng API được; cần partner xác nhận bằng admin/UI. Cấu hình: 1 approval, dismiss stale, require conversation resolution; status checks/linear history OFF; force push/deletion OFF; admin bypass giữ nguyên.
+
+**Bằng chứng protection hoạt động:** push trực tiếp vào `main` bị từ chối `protected branch hook declined` (19/11/2026) — mọi thay đổi phải đi qua PR.
 
 - Giữ **admin bypass** (mặc định của GitHub) — đừng tắt.
 - Khi cần hotfix mà không có reviewer:
