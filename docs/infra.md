@@ -328,6 +328,31 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 6. **Cửa sổ Pause:** 25/11 **00:00 → 02:00** (2 giờ), rebuild xong resume + verify ngay; không pause 24h.
 7. **Negative test Pause — ✅ ĐÃ TEST 20/11:** Pause 4 monitor → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG** có tin mới → resume + start nginx. Kết quả PASS, evidence `20-negative-pause.txt`. Nếu có tin → Pause hỏng, drill sẽ bắn alert giả.
 
+### 11.3. Drill 27/11 — đo thời gian phản ứng alert thật
+
+Làm **sau** rebuild 25–26, trước demo 29/11. Mục tiêu: đo SLA phản ứng 15 phút của người trực.
+
+```bash
+# T0 — giả lập sự cố
+date -u +%FT%TZ
+sudo systemctl stop nginx
+
+# Chờ Discord #alert + email tới (không pause monitor). Ghi T1 = thời điểm tin tới.
+# Người trực xác nhận trong #alert, ghi T2 = thời điểm xác nhận.
+
+# Khôi phục
+sudo systemctl start nginx
+curl -sS https://internship-tracker.duckdns.org/health
+```
+
+| Chỉ số | Công thức | Mục tiêu |
+|---|---|---|
+| Độ trễ alert | `T1 - T0` | ≤ 10' (interval 5' + trễ) |
+| Thời gian phản ứng | `T2 - T0` | **≤ 15'** |
+| Kênh nhận | Discord + email | Cả 2 |
+
+Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `docs/evidence/27-alert-response.txt`. Nếu `T2-T0 > 15'` → sửa lịch trực/notify trước demo 29/11.
+
 ---
 
 ## 12. Monitoring
@@ -361,6 +386,18 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 > **Pages monitor (liên kết §16):** Pages đang Public và 200 (`https://anhmy1312.github.io/internship_tracker/`). Monitor Pages (keyword `Internship Tracker`, điều kiện **keyword does NOT exist**, 5', Discord) đã tạo lúc 20/11 và **Up** — không còn rủi ro unpublish không biết.
 
 > **Negative test Pause ✅ PASS 20/11:** Pause 4 monitor lúc 08:41:51 UTC → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG có tin mới** (tin cuối vẫn là 14:52 local) → start nginx lúc 08:48:53 UTC → Resume 4 monitor. Verify: nginx active, `/health` 200, `/` 200. Evidence: `docs/evidence/20-negative-pause.txt`. Drill 25/11 có thể Pause an toàn.
+
+> **Alert contacts — chốt 20/11:** email `namtruong0331@gmail.com` (event: Up + Down) **đã verify và nhận test notification thành công**; **Discord integration #1** được tick trên **cả 4 monitor** (đã kiểm tra từng monitor qua UI). Test gửi cả 2 kênh cùng lúc → email + Discord đều nhận. Cấu hình email tổng tại `dashboard.uptimerobot.com/account/notifications`. SMS/Voice không dùng (cần plan trả phí).
+
+### 12.1. Trực #alert 28–29/11 (SLA 15 phút)
+
+| Khung (UTC+7) | Người trực | Trách nhiệm |
+|---|---|---|
+| 28/11 20:00 → 29/11 08:00 | **Nam** | Theo dõi `#alert`, xác nhận trong vòng **15 phút**, báo Anh Mỹ nếu không tự xử lý được |
+| 29/11 08:00 → demo xong | **Anh Mỹ** | Như trên; là đầu mối trong buổi demo |
+
+- Quá **15 phút** không ai xác nhận → **gọi điện** cho người còn lại (Discord có thể bị trễ/điện thoại tắt thông báo).
+- Discord **mobile push** cho `#alert` phải bật trước 29/11 (xem §13.1). Email là kênh dự phòng đã verify.
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
 
