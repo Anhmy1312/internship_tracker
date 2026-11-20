@@ -11,10 +11,23 @@ const applicationSchema = z.object({
     notes: z.string().max(2000).default(""),
 });
 
+const applicationPatchSchema = z.object({
+    company: z.string().min(1).max(200).optional(),
+    role: z.string().min(1).max(200).optional(),
+    jdUrl: z.url().or(z.literal("")).optional(),
+    location: z.string().max(200).optional(),
+    remote: z.boolean().optional(),
+    deadline: z.iso.date().or(z.literal("")).optional(),
+    status: z.enum(["wishlist", "applied", "interview", "offer", "rejected"]).optional(),
+    notes: z.string().max(2000).optional(),
+});
+
+
+
 function parseId(value) {
     if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)) return null;
     const n = Number(value);
     return Number.isSafeInteger(n) ? n : null;
 }
 
-module.exports = { applicationSchema, parseId };
+module.exports = { applicationSchema, applicationPatchSchema, parseId };
