@@ -1,0 +1,57 @@
+# Negative test 2 monitor Redirect + Pages — 21/11/2026
+
+Mục đích: chứng minh **monitor Redirect và Pages thực sự bắn alert khi Down**.
+Khác với negative test Pause (chứng minh Pause chặn alert), test này **chỉ sửa cấu hình monitor**,
+**KHÔNG tắt nginx** — site/API vẫn chạy bình thường.
+
+## Cách tạo Down (chỉ sửa monitor)
+
+| Monitor | Thay đổi tạm thời | Lý do |
+|---|---|---|
+| Redirect (id 804745593) | URL → `https://internship-tracker.duckdns.org/khong-co-negative-test` | route này trả **404** → HTTP monitor báo Down |
+| Pages (id 804745613) | Keyword → `ZZZ_NEGATIVE_TEST_ZZZ`, giữ điều kiện **Start incident when keyword does NOT exist** | keyword không có trong HTML → báo Down |
+
+## Timeline
+
+| Giờ local (UTC+7) | Giờ UTC | Sự kiện |
+|---|---|---|
+| 14:58 | 07:58 | Sửa 2 monitor qua UptimeRobot UI |
+| 14:59 | 07:59 | Discord `#alert` nhận **2 tin DOWN** |
+| ~15:04 | 08:04 | UptimeRobot UI: `internship-tracker pages — KW Down 5 min, 9 sec \| Keyword has not been found`; `internship-tracker redirect — HTTP Down 5 min, 39 sec \| 404`; `internship-tracker site` + `/health` vẫn **Up** |
+| 15:05–15:06 | 08:05–08:06 | Khôi phục URL/keyword cũ; 2 monitor về **Up** |
+| 15:06 | 08:06 | Discord nhận 2 tin UP: `It was down for 6 minutes and 18/19 seconds` |
+
+## Tin Discord #alert (bản chụp từ terminal của Nam)
+
+```text
+UptimeRobot APP — 2:59 CH
+Monitor is DOWN: internship-tracker redirect
+( https://internship-tracker.duckdns.org/khong-co-negative-test ) - Reason:
+HTTP 404 - Not Found
+Location: Ashburn, USA (North America)
+
+Monitor is DOWN: internship-tracker pages
+( https://anhmy1312.github.io/internship_tracker/ ) - Reason:
+Keyword Does Not Exist
+Location: Ohio, USA (North America)
+```
+
+## Verify trong lúc Down
+
+```text
+internship-tracker pages    KW    Down 5m09s | Keyword has not been found
+internship-tracker redirect HTTP  Down 5m39s | 404
+internship-tracker site     KW    Up 4h39m
+internship-tracker.duckdns.org/health HTTP Up 4h39m
+
+curl https://internship-tracker.duckdns.org/health -> 200 (nginx KHONG bi tat)
+curl https://internship-tracker.duckdns.org/applications -> 200 (3 don seed)
+```
+
+## Kết luận
+
+**PASS** — cả Redirect lẫn Pages bắn alert thật khi Down, kèm đúng lý do (404 / Keyword Does Not Exist).
+Kết hợp với `20-negative-pause.txt` (Pause chặn alert) → chu trình alert hoàn chỉnh trước drill 25–26.
+
+Cấu hình monitor đã khôi phục: Redirect = `http://internship-tracker.duckdns.org/health`,
+Pages = keyword `Internship Tracker` / `keyword does NOT exist`. Cả 4 monitor Up.
