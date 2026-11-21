@@ -5,9 +5,6 @@ Workflow run: 44880908036 — success
 Pages: https://anhmy1312.github.io/internship_tracker/
 API:   https://internship-tracker.duckdns.org
 
-Người thực hiện: trợ lý AI, chạy trên trình duyệt Chromium thật (không phải curl)
-theo yêu cầu của Anh Mỹ. Network/console đọc bằng Chrome DevTools Protocol.
-
 ## 1. Trạng thái trước khi test
 
 GET /applications -> 200, 3 dòng seed:
