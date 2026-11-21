@@ -328,30 +328,59 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 6. **Cửa sổ Pause:** 25/11 **00:00 → 02:00** (2 giờ), rebuild xong resume + verify ngay; không pause 24h.
 7. **Negative test Pause — ✅ ĐÃ TEST 20/11:** Pause 4 monitor → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG** có tin mới → resume + start nginx. Kết quả PASS, evidence `20-negative-pause.txt`. Nếu có tin → Pause hỏng, drill sẽ bắn alert giả.
 
-### 11.3. Drill 27/11 — đo thời gian phản ứng alert thật
+### 11.3. Drill gộp 25/11 + đo alert 27/11 (chốt 23/11)
 
-Làm **sau** rebuild 25–26, trước demo 29/11. Mục tiêu: đo SLA phản ứng 15 phút của người trực.
+**Nguyên tắc:** đo alert **SAU khi Resume monitor**, không đo lúc đang Pause.
+
+#### A. Khung 25/11 00:00 → 02:00 (drill rebuild)
+
+```text
+00:00  Pause cả 4 monitor (Health + Site + Redirect + Pages)
+       Giữ VM CŨ: Stop/Deallocate có, nhưng KHÔNG xoá disk/resource đến 26/11.
+       (Static IP 40.83.74.1 phải detach khỏi VM cũ để gắn sang VM mới.)
+
+00:00–02:00  Rebuild theo §11 + verify:
+       /health 200 (JSON API), / 200, HTTP → 301
+       3 jail fail2ban active; logrotate -f có .1/.2.gz
+       CRUD 1 đơn test (thêm → reload còn → xoá), DB lại 3 seed
+       Ghi GIỜ THẬT từng bước vào bảng §11.
+
+02:00  HARD STOP: nếu chưa xong → revert sang VM cũ, Resume 4 monitor,
+       ghi "FAIL" + lý do vào evidence. Không kéo dài quá 02:00.
+
+02:00  Resume cả 4 monitor → verify 4 Up.
+```
+
+> Ngoài khung 00:00–02:00 **không deallocate VM**. Việc Stop/Deallocate trong drill là có chủ đích, có Pause monitor, khác với 4 lần shutdown sự cố hôm 17–20/11.
+
+#### B. 25/11 02:05 → 02:20 — đo T0 → T1 (delivery)
 
 ```bash
-# T0 — giả lập sự cố
-date -u +%FT%TZ
+# Sau khi monitor đã Resume và Up
+date -u +%FT%TZ          # T0
 sudo systemctl stop nginx
-
-# Chờ Discord #alert + email tới (không pause monitor). Ghi T1 = thời điểm tin tới.
-# Người trực xác nhận trong #alert, ghi T2 = thời điểm xác nhận.
-
-# Khôi phục
+# chờ Discord #alert + email tới → ghi T1
 sudo systemctl start nginx
 curl -sS https://internship-tracker.duckdns.org/health
 ```
 
+- `T1 - T0` mục tiêu **≤ 10'** (interval 5' + trễ).
+- Ghi vào `docs/evidence/25-26-drill.txt` (append, KHÔNG ghi đè dry-run 20/11).
+
+#### C. 27/11 15:00 — đo T2 (phản ứng người trực)
+
+Partner bất ngờ `sudo systemctl stop nginx` lúc **Nam không biết trước** (không thức khuya).
+Nam ack trong `#alert` trong vòng **15 phút** → `T2 - T0 ≤ 15'`.
+
 | Chỉ số | Công thức | Mục tiêu |
 |---|---|---|
-| Độ trễ alert | `T1 - T0` | ≤ 10' (interval 5' + trễ) |
-| Thời gian phản ứng | `T2 - T0` | **≤ 15'** |
+| Delivery | `T1 - T0` (25/11) | ≤ 10' |
+| Phản ứng | `T2 - T0` (27/11) | **≤ 15'** |
 | Kênh nhận | Discord + email | Cả 2 |
 
-Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `docs/evidence/27-alert-response.txt`. Nếu `T2-T0 > 15'` → sửa lịch trực/notify trước demo 29/11.
+Ghi `T0/T1/T2`, người trực, độ trễ và ảnh `#alert` vào `docs/evidence/27-alert-response.txt`.
+
+> **Nếu bỏ 27/11:** evidence phải ghi rõ **“T2 chưa đo”** + xác nhận đã test **mobile push** cho `#alert`. Không được im lặng.
 
 ---
 
@@ -587,11 +616,12 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 | 21/11 | Negative test Pause (20/11) + negative test alert Redirect/Pages ✅ | xong |
 | 23/11 | **Không deploy lại** (API + Pages đã live từ 21/11) | ✅ |
 | 24/11 | fail2ban Nginx + log rotation | ✅ xong từ 20/11 |
-| 25–26/11 | Rebuild drill theo runbook §11 (bước 14–15 + §11.2), Pause 4 monitor khung 00:00–02:00 | ☐ |
-| 27/11 | Drill đo phản ứng alert theo §11.3 | ☐ |
+| 25/11 00:00–02:00 | Drill rebuild gộp (§11.3A): Pause 4 monitor → rebuild + verify `/health`, `/`, 301, 3 jail, logrotate, CRUD 1 đơn → **hard stop 02:00** → Resume 4 Up. Giữ VM cũ đến 26/11, không xoá disk | ☐ |
+| 25/11 02:05–02:20 | Đo `T0→T1` delivery sau khi Resume (§11.3B), append `25-26-drill.txt` | ☐ |
+| 27/11 15:00 | Đo `T2` — partner stop nginx bất ngờ, Nam ack `#alert` ≤ 15' (§11.3C). Nếu bỏ → ghi "T2 chưa đo" + test mobile push | ☐ |
 | 28/11 20:00 → 29/11 08:00 | **Nam** trực `#alert` (SLA 15') — xong ca thì bàn giao | ☐ |
 | 29/11 08:00 → demo xong | **Anh Mỹ** trực `#alert`, là đầu mối trong demo (khớp §12.1) | ☐ |
 | Sau 29/11 | 1 PR close-out duy nhất (protection + webhook + monitor + drill) | ☐ branch `infra/week2-closeout` sẵn |
 
 - PR nhỏ **#8** (3 file rebuild) **đã merge** (merge commit **`e9727a1`**) — đây là PR hạ tầng, không phải PR lẻ về docs.
-- **Không deallocate VM** từ giờ đến hết demo.
+- **Không deallocate VM từ giờ đến hết demo**, trừ khung drill có chủ đích 25/11 00:00–02:00 (đã Pause monitor). VM cũ giữ disk đến 26/11 để revert nếu hard stop.
