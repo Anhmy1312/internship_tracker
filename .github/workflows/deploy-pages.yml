@@ -1,0 +1,68 @@
+name: Deploy client to GitHub Pages
+
+# Build React client với URL API production rồi publish lên Pages.
+# Secret KHÔNG nằm trong repo: VITE_API_URL là public (URL API), đặt thẳng trong env.
+# Rollback: Actions → chọn run cũ → "Re-run all jobs" (hoặc revert commit).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (VITE_API_URL baked tại build-time)
+        env:
+          VITE_API_URL: https://internship-tracker.duckdns.org/applications
+        run: npm run build
+
+      - name: Verify asset prefix /internship_tracker/
+        run: |
+          grep -q '/internship_tracker/assets/' dist/index.html
+          echo "OK: index.html co prefix /internship_tracker/assets/"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
