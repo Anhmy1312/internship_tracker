@@ -498,3 +498,61 @@ Branch protection: `Require a pull request` + **1 approval**. Với team 2 ngư�
 > **PII scan 20/11:** repo Public đã rà lại. Email cá nhân + email trường (kèm MSSV) trong `docs/` thay bằng **“email của Nam — lưu Bitwarden”**; ảnh `15-nsg.png` đã crop bỏ thanh account Azure (lộ email trường + MSSV). Các ảnh evidence còn lại đã kiểm tra, không chứa email/MSSV. Trước PR close-out phải scan lại một lần nữa.
 
 - Nếu client được phục vụ từ Pages, UptimeRobot phải monitor cả 2 endpoint (VM + Pages) để phát hiện việc unpublish. **Hiện đã giữ Public + Pages (200) và monitor Pages ở §12 đã ✅ Up (tạo 20/11).**
+
+---
+
+## 17. Deploy API lên VM (kế hoạch 22/11 — cập nhật theo partner)
+
+> ⚠️ Kế hoạch gốc ghi “Node/systemd chỉ sau 29/11”. Partner đổi sang deploy 22/11 → phải cập nhật `docs/handoff-partner-23-11.md` trong PR close-out cho khớp.
+
+### 17.1. Chuẩn bị
+
+- Code API nằm ở branch **`week-4-api`** (`server/`, `client/`, `deploy/`). `main` hiện vẫn là site tĩnh.
+- VM hiện: **chưa có Node/npm**, `/opt` trống, Nginx đang serve tĩnh + `/health` JSON tĩnh.
+- DB là **PostgreSQL ngoài (Neon)** — không cài DB trên VM. Cần `DATABASE_URL` (secret, lưu Bitwarden).
+- Biến môi trường production:
+
+```text
+DATABASE_URL=postgresql://...      (Neon — Bitwarden)
+PORT=3000
+CORS_ORIGIN=https://anhmy1312.github.io
+API_VERSION=0.1.0
+DEMO_USER_ID=1
+
+# Client build (baked tại build-time):
+VITE_API_URL=https://internship-tracker.duckdns.org/applications
+```
+
+### 17.2. File đã chuẩn bị sẵn trong repo
+
+| File | Dùng để |
+|---|---|
+| `infra/nginx/internship-tracker-api.conf` | Thay hẳn config tĩnh: `/health` proxy sang API, thêm `/applications`, giữ TLS/HSTS/rate limit |
+| `infra/scripts/preflight-api.sh` | Chạy trên VM sau deploy, bắt 6 lỗi hay gặp |
+| `deploy/internship-tracker.service` (branch `week-4-api`) | systemd unit — dùng cái này, không dùng `infra/systemd/...` (chỉ là template review) |
+| `deploy/nginx-locations.conf` (branch `week-4-api`) | Tham khảo 2 location proxy |
+
+### 17.3. Thứ tự deploy (tóm tắt 8 bước partner)
+
+1. `git fetch origin && git switch -c week-4-api origin/week-4-api`.
+2. `ssh staging "sudo mkdir -p /opt/internship-tracker && sudo chown deploy:deploy /opt/internship-tracker"`.
+3. Cài **Node 22 LTS qua NodeSource**: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs`.
+4. `scp -r server deploy@40.83.74.1:/opt/internship-tracker/`.
+5. `cd /opt/internship-tracker/server && cp .env.example .env` → điền biến ở 17.1 → `npm ci` → `npm run db:check` → `npm run db:setup`.
+6. `scp deploy/internship-tracker.service staging:/tmp/` → `sudo install -m 644 /tmp/internship-tracker.service /etc/systemd/system/` → `daemon-reload` → `enable --now internship-tracker` → phải `active (running)`.
+7. Copy `infra/nginx/internship-tracker-api.conf` → `/etc/nginx/sites-available/internship-tracker` → `nginx -t` → `reload nginx`.
+8. Chạy `bash infra/scripts/preflight-api.sh` trên VM. Tất cả dòng phải **OK**, không có **FAIL**.
+9. Chỉ sau đó: PR `week-4-api → main` → approve → merge → build Pages với `VITE_API_URL` ở 17.1 → smoke test thêm/sửa/xoá đơn.
+
+### 17.4. 6 lỗi hay gặp và cách use preflight bắt
+
+| Triệu chứng | Nguyên nhân | Fix |
+|---|---|---|
+| Nginx `duplicate location` | Thêm `location = /health` mới trong khi cái tĩnh còn lại | **Thay** bằng file `internship-tracker-api.conf`; preflight đếm `location = /health` phải = 1 |
+| `502` | Service chưa chạy / `proxy_pass` sai port | `systemctl status internship-tracker`; `curl http://127.0.0.1:3000/health` trên VM |
+| CORS error | `CORS_ORIGIN` để `localhost:5173` | Đổi thành `https://anhmy1312.github.io` (preflight check) |
+| `203/EXEC` | systemd không thấy node (dùng nvm) | Cài NodeSource apt → `/usr/bin/node` |
+| UptimeRobot /health đỏ sau proxy | Nhầm thêm `limit_req` vào `/health` | `/health` **không** rate-limit (file API đã làm đúng) |
+| Mất HSTS/security header | `add_header` trong `location /health` ghi đè server | File API **không** dùng `add_header` trong location proxy |
+
+> Sau proxy, `/health` không còn `"phase":"static"` — cập nhật monitor note ở §12 khi deploy xong.
