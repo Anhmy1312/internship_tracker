@@ -489,7 +489,7 @@ Branch protection: `Require a pull request` + **1 approval**. Với team 2 ngư�
 
 ## 16. Cảnh báo trước khi chuyển repo sang Private
 
-- GitHub Pages **đang bật**: `https://anhmy1312.github.io/internship_tracker/` (source `main`).
+- GitHub Pages **đang bật**: `https://anhmy1312.github.io/internship_tracker/` (source = **GitHub Actions** từ 21/11; workflow `.github/workflows/deploy-pages.yml`).
 - Trên tài khoản **Free**, chuyển repo sang **Private** sẽ **unpublish Pages**.
 - Trước khi flip: kiểm tra `github.com/settings/billing` / Student Pack xem có **GitHub Pro** không.
   - **Có Pro** → flip Private an toàn, kiểm tra lại Pages sau khi flip.
@@ -578,7 +578,7 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 
 > **Quyết định chọn B (GitHub Actions):** repo Public → Actions miễn phí, không commit `dist/`, URL production nằm trong workflow, rollback = re-run job. `client/vite.config.ts` có `base: '/internship_tracker/'`; workflow `.github/workflows/deploy-pages.yml` trigger `push main`, `permissions: pages:write + id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`.
 
-> ✅ **PR #8 đã merge vào `main`**: `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh` (commit `510d824`). VM chết giờ rebuild được từ main. Branch `deploy/pages-actions` (PR #6 trùng) đã xoá; PR #6 closed.
+> ✅ **PR #8 đã merge vào `main` lúc chiều 21/11** (merge commit **`e9727a1`**, head `510d824`): `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh`. VM chết giờ rebuild được từ main. Branch `deploy/pages-actions` (PR #6 trùng) đã xoá; PR #6 closed. Không cần approve.
 
 ## 19. Lịch còn lại sau deploy 21/11
 
@@ -589,8 +589,9 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 | 24/11 | fail2ban Nginx + log rotation | ✅ xong từ 20/11 |
 | 25–26/11 | Rebuild drill theo runbook §11 (bước 14–15 + §11.2), Pause 4 monitor khung 00:00–02:00 | ☐ |
 | 27/11 | Drill đo phản ứng alert theo §11.3 | ☐ |
-| 28/11 20:00 | **Nam trực #alert** đến hết demo 29/11 (SLA 15') | ☐ |
+| 28/11 20:00 → 29/11 08:00 | **Nam** trực `#alert` (SLA 15') — xong ca thì bàn giao | ☐ |
+| 29/11 08:00 → demo xong | **Anh Mỹ** trực `#alert`, là đầu mối trong demo (khớp §12.1) | ☐ |
 | Sau 29/11 | 1 PR close-out duy nhất (protection + webhook + monitor + drill) | ☐ branch `infra/week2-closeout` sẵn |
 
-- PR nhỏ **#8** (3 file rebuild) **đã merge** — đây là PR hạ tầng, không phải PR lẻ về docs.
+- PR nhỏ **#8** (3 file rebuild) **đã merge** (merge commit **`e9727a1`**) — đây là PR hạ tầng, không phải PR lẻ về docs.
 - **Không deallocate VM** từ giờ đến hết demo.
