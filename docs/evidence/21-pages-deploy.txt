@@ -1,0 +1,112 @@
+# Pages deploy + production smoke test — 21/11/2026
+
+Commit: 39c4214 (Merge PR #7 week-4-api)
+Workflow run: 44880908036 — success
+Pages: https://anhmy1312.github.io/internship_tracker/
+API:   https://internship-tracker.duckdns.org
+
+Người thực hiện: trợ lý AI, chạy trên trình duyệt Chromium thật (không phải curl)
+theo yêu cầu của Anh Mỹ. Network/console đọc bằng Chrome DevTools Protocol.
+
+## 1. Trạng thái trước khi test
+
+GET /applications -> 200, 3 dòng seed:
+
+    Local startup  Fullstack Intern   interview
+    Shopee         Frontend Intern    applied
+    Grab           Software Engineer  wishlist
+
+## 2. POST — tạo đơn
+
+    POST https://internship-tracker.duckdns.org/applications
+
+Request body:
+
+    {"company":"Smoke Test 21/11","role":"QA Intern","jdUrl":"","location":"Remote",
+     "remote":true,"deadline":"2026-12-01","status":"applied","notes":"smoke test - se xoa"}
+
+Kết quả:
+
+    HTTP 201   (389 ms, response date header: Sat, 21 Nov 2026 07:56:26 GMT)
+    Access-Control-Allow-Origin: https://anhmy1312.github.io
+
+Response body:
+
+    {"id":"6","company":"Smoke Test 21/11","role":"QA Intern","jdUrl":"","location":"Remote",
+     "remote":true,"deadline":"2026-12-01","status":"applied","notes":"smoke test - se xoa"}
+
+UI: danh sách còn 4 dòng, form được reset.
+Ảnh: docs/evidence/21-pages-smoke-create.png (dòng Smoke Test 21/11, status Interview)
+
+## 3. Reload — kiểm tra đã lưu Postgres
+
+    F5 -> GET /applications -> 200 (307 ms)
+    UI: 4 dòng, "Smoke Test 21/11" vẫn còn, status "applied".
+    Kết luận: dữ liệu nằm trong DB, không phải state của React.
+
+## 4. PATCH — đổi status
+
+    PATCH https://internship-tracker.duckdns.org/applications/6
+    Request body: {"status":"interview"}
+
+Kết quả:
+
+    HTTP 200   (128 ms)
+    Access-Control-Allow-Origin: https://anhmy1312.github.io
+    Response: {"id":"6",...,"status":"interview",...}
+
+Reload lần 2 -> GET 200, UI vẫn "Interview", notes "smoke test - se xoa" còn nguyên.
+
+## 5. DELETE — xoá đơn test
+
+    DELETE https://internship-tracker.duckdns.org/applications/6
+
+Kết quả:
+
+    HTTP 204   (358 ms)
+    Body: rỗng (0 byte)
+    Access-Control-Allow-Origin: https://anhmy1312.github.io
+
+Reload lần 3 -> GET 200, UI còn đúng 3 dòng, không còn "Smoke Test 21/11".
+Console: 0 error trong toàn bộ quá trình.
+
+## 6. Kiểm tra lỗi trên production
+
+    PATCH /applications/1   body {}
+      -> 400  {"error":"No field to update"}
+
+    PATCH /applications/abc body {"status":"applied"}
+      -> 400  {"error":"Invalid id"}
+
+    DELETE /applications/999999
+      -> 404  {"error":"Application not found"}
+
+Ghi chú: PowerShell 5.1 làm mất dấu ngoặc kép khi truyền JSON trực tiếp qua
+`--data-binary "..."`; lần đầu request /abc trả "Invalid JSON body" vì body bị
+thành `{status:applied}`. Test lại bằng file UTF-8 (`--data-binary "@file"`)
+mới ra đúng "Invalid id".
+
+## 7. Trạng thái sau test
+
+    GET /applications -> 200, 3 dòng:
+    3  Local startup  interview
+    1  Shopee         applied
+    2  Grab           wishlist
+
+Không còn bản ghi test. DB sạch.
+
+## 8. Bundle đã deploy
+
+    dist/index.html -> /internship_tracker/assets/index-m1esDYUi.js
+    Bundle chứa: https://internship-tracker.duckdns.org/applications
+    Không còn chuỗi localhost:3000.
+
+## 9. Ghi chú về ảnh
+
+Hai ảnh là ảnh chụp trang thật ở 512px (viewport của cửa sổ trình duyệt trong app),
+không phải ảnh chụp panel DevTools. Số liệu network ở trên lấy trực tiếp từ
+DevTools Protocol (method, status, request body, response body, timing, header),
+nên chính xác hơn ảnh chụp màn hình.
+
+- 21-pages-smoke-create.png: sau POST + PATCH, 4 dòng, dòng test đang Interview.
+- 21-pages-smoke-final.png: sau DELETE + reload, còn 3 dòng.
