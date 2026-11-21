@@ -40,13 +40,23 @@ Cần **chốt một kiến trúc** trước khi viết PR API.
 
 API hiện **không có auth** — POST/PATCH/DELETE công khai. Tối thiểu trước demo: rate limit riêng cho `/api/` + backup DB. Auth là Week 5.
 
+> **Cập nhật 21–23/11:** API Express + Neon **đã deploy thật trên VM từ 21/11** (không đợi sau 29/11 như kế hoạch cũ). Client publish lên Pages qua **GitHub Actions (phương án B, partner chốt 22/11)** với `vite.config.ts` `base: '/internship_tracker/'` và `VITE_API_URL` đặt trong workflow. PR deploy: **#6**. Bằng chứng `docs/evidence/21-api-deploy.txt`.
+
 ## 4. Private + branch protection — 3 điều kiện (có thay đổi quan trọng)
 
 1. **GitHub Pages đang bật** (`anhmy1312.github.io/internship_tracker`, source `main`). Trên tài khoản **Free**, flip Private sẽ **unpublish Pages** → nếu client đang ở Pages thì site client mất. Trước khi flip: kiểm tra `github.com/settings/billing` / Student Pack có **GitHub Pro** không.
    - Có Pro → flip Private, kiểm tra Pages sau khi flip.
    - Không có Pro → **giữ Public** (đã scan, không secret) và bật protection trên public (miễn phí); chuyển Private sau khi Pro duyệt.
-2. Branch protection trên Private cũng phụ thuộc gói — thử bật sau khi flip; nếu UI không cho → quay lại phương án public.
+2. **Branch protection trên Private** cũng phụ thuộc gói — thử bật sau khi flip; nếu UI không cho → quay lại phương án public.
 3. `Require a pull request` + **1 approval** với team 2 người = single point of failure. Giữ **admin bypass** (mặc định) và dùng quy trình khẩn cấp đã ghi trong `docs/infra.md` mục 15 (báo `#chung`, merge, ghi log, review bổ sung).
+
+## 4.1. Publish Pages — chọn B (GitHub Actions), chốt 22/11
+
+- Lý do: repo Public → Actions miễn phí, **không commit `dist/`**, URL production nằm trong workflow, rollback = re-run job.
+- Owner đổi **Settings → Pages → Source = GitHub Actions**.
+- `client/vite.config.ts` thêm `base: '/internship_tracker/'` (bắt buộc; nếu không asset `/assets/...` bị 404).
+- Workflow `.github/workflows/deploy-pages.yml`: trigger `push main` + `workflow_dispatch`, `permissions: pages:write, id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`.
+- PR deploy: **#6** `deploy/pages-actions → main` (chờ Anh Mỹ approve + merge commit).
 
 ## 5. Các lỗi đã sửa theo review (23/11)
 

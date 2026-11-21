@@ -572,4 +572,6 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 
 > Backup config tĩnh: `/etc/nginx/sites-available/internship-tracker.static.bak` (để rollback nếu cần).
 
-**Tiếp theo (phía bạn/Anh Mỹ):** approve PR `week-4-api → main` → merge commit → build Pages với `VITE_API_URL=https://internship-tracker.duckdns.org/applications` → smoke test thêm/sửa/xoá đơn.
+**Tiếp theo (phía bạn/Anh Mỹ):** approve PR **#6** (`deploy/pages-actions → main`) → merge commit → **Settings → Pages → Source = GitHub Actions** → kiểm tra Action xanh → smoke test thêm/sửa/xoá đơn.
+
+> **Quyết định 22/11 — chọn B (GitHub Actions):** repo Public → Actions miễn phí, không commit `dist/`, URL production nằm trong workflow, rollback = re-run job. `client/vite.config.ts` thêm `base: '/internship_tracker/'` (đã verify build trên VM Node 22: `dist/index.html` trỏ `/internship_tracker/assets/...`, bundle chứa URL API). Workflow `.github/workflows/deploy-pages.yml` trigger `push main`, `permissions: pages:write + id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`. PR #6 head `436b7eb`.
