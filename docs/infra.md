@@ -442,16 +442,15 @@ curl -sS https://internship-tracker.duckdns.org/health
 | 14:48 | 07:48:52 | VM boot lại (`journalctl --list-boots`, boot `63da14db…`) |
 | 14:52 | 07:52 | UptimeRobot báo UP, `down for 5 hours and 6 minutes` |
 
-**Nguyên nhân đã xác nhận một phần:** shutdown do **Azure platform/host** khởi xướng — không phải nginx, ufw, cert hay rate limit. Các lần shutdown trước đó không cố định giờ (17/11 10:41, 18/11 09:24, 19/11 18:19, 20/11 09:43 local) → nghiêng về **Stop/Deallocate thủ công để tiết kiệm credit**, nhưng cần Activity log để chốt.
+**Nguyên nhân ĐÃ CHỐT 21/11:** Activity log Azure cho thấy cả 4 lần là **“Deallocate Virtual Machine – Succeeded”**, **Event initiated by = tài khoản Azure của Nam (owner)** — tức **deallocate thủ công** (khả năng cao để tiết kiệm credit), **KHÔNG phải auto-shutdown policy**. VM log (`hv_utils: Shutdown request received`) chỉ là hệ quả của lệnh từ Azure control plane.
 
 **Việc còn phải làm trước 29/11:**
 
-- [ ] Azure Portal (account **Nam** — owner Azure) → `vm-it-staging` → **Activity log** → kiểm tra **cả 4 lần shutdown trong 4 ngày** (17/11 10:41, 18/11 09:24, 19/11 18:19, 20/11 09:43 local) → xem **Caller** là user hay policy **Auto-shutdown**. Nam tự check; partner chỉ giám sát.
-- [ ] Nếu có **Auto-shutdown** → **tắt ngay** trước 29/11 (VM phải sống trong demo).
-- [ ] Từ giờ đến demo: **không ai deallocate VM**. Nếu cần tiết kiệm credit → dùng **budget alert**, không tắt VM.
-- [ ] Ghi actor/lịch shutdown vào mục này khi có kết quả.
-- [ ] Bật **Discord mobile push notification** cho `#alert` (điện thoại phải hiện thông báo) — 5 giờ không ai thấy là rủi ro cho demo. Email alert đã có nhưng chưa đủ.
-- [ ] Nguyên tắc: **không Deallocate VM khi monitor đang bật**; nếu bắt buộc tắt → Pause cả 4 monitor trước (negative test Pause đã PASS, §12).
+- [x] Activity log đã check: Caller = **Nam (owner Azure)**, 4 lần `Deallocate Virtual Machine` vào 17/11, 18/11, 19/11, 20/11. Không có policy auto-shutdown trong log.
+- [ ] Vào **Operations → Auto-shutdown** xác nhận trạng thái **Disabled** (nếu Enabled → tắt ngay).
+- [x] Từ giờ đến demo: **không deallocate VM**. Nếu cần tiết kiệm credit → dùng **budget alert**, không tắt VM.
+- [x] Discord **mobile push** cho `#alert` đã bật + test notification nhận được.
+- [x] Nguyên tắc: **không Deallocate VM khi monitor đang bật**; nếu bắt buộc tắt → Pause cả 4 monitor trước (negative test Pause đã PASS, §12).
 
 ---
 
