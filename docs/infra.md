@@ -364,7 +364,7 @@ Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `doc
 | Redirect | `http://internship-tracker.duckdns.org/health` (kỳ vọng 301) | 5' | Discord #alert — ✅ Up (tạo 20/11) |
 | Pages | `https://anhmy1312.github.io/internship_tracker/` — Keyword `Internship Tracker`, **keyword does NOT exist** | 5' | Discord #alert — ✅ Up (tạo 20/11) |
 
-> `/health` là JSON tĩnh → 200 không chứng minh site còn file. Monitor **Site** bắt trường hợp mất `index.html`; giữ nguyên monitor Health.
+> `/health` giờ là JSON của API (`{"status":"ok","uptime":...,"version":"0.1.0"}`) sau khi deploy 21/11 — 200 không chứng minh site còn file. Monitor **Site** bắt trường hợp mất `index.html`; giữ nguyên monitor Health. *(Trước deploy: JSON tĩnh có `"phase":"static"`.)*
 
 > **Trước khi tạo monitor Site:** VM phải **đang chạy**. Azure Portal (tài khoản Anh Mỹ) → `vm-it-staging` → **Start**; chờ 1–2 phút; verify `curl https://.../health` = 200 và `curl https://.../` = 200 rồi mới Add monitor. Tạo monitor khi VM tắt → monitor đỏ ngay, alert giả.
 >
@@ -461,7 +461,8 @@ curl -sS https://internship-tracker.duckdns.org/health
 - [x] fail2ban jail cho Nginx — **xong 20/11** (sớm, kế hoạch 24/11): `infra/fail2ban/jail.d/internship-tracker.local`; jails `nginx-limit-req` (429 → ban 1h) + `nginx-botsearch` (path khai thác 404 → ban 24h); `backend=polling` vì nginx ghi log file; đã ban thật rồi unban; bằng chứng `docs/evidence/24-fail2ban-nginx.txt`
 - [x] Log rotation — **xong 20/11**: dùng `/etc/logrotate.d/nginx` có sẵn (daily, rotate 14, compress, delaycompress); đã `logrotate -f`, thấy `.1`/`.2.gz`, nginx vẫn active; cùng evidence 24
 - [ ] Tách TLS-expiry alert riêng (hiện có qua Discord integration nhưng chưa có monitor chuyên biệt)
-- [ ] API (sau 29/11): auth cho POST/PATCH/DELETE, rate limit riêng `/api/`, backup DB trước demo — auth là Week 5
+- [x] Deploy API Express + Neon lên VM — **xong 21/11** (sớm, kế hoạch 22/11): Node 22 LTS, systemd `internship-tracker`, Neon `neondb` (schema + seed), Nginx proxy `/health` + `/applications`; nguồn `week-4-api` commit `189056f`; evidence `docs/evidence/21-api-deploy.txt`
+- [ ] API Week 5: auth cho POST/PATCH/DELETE, TLS-expiry monitor riêng, backup DB trước demo — auth là Week 5
 - [ ] Chọn kiến trúc client: GitHub Pages (cần CORS `https://anhmy1312.github.io`) hay phục vụ từ VM (same-origin, không cần CORS). `VITE_API_URL` là build-time → đổi URL phải build lại.
 - [ ] Docker: **port publish đi xuyên ufw** — khi thêm Docker phải bind `127.0.0.1:PORT:PORT` hoặc thêm rule `DOCKER-USER`
 - [ ] Postgres backup + restore drill
@@ -555,4 +556,21 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 | UptimeRobot /health đỏ sau proxy | Nhầm thêm `limit_req` vào `/health` | `/health` **không** rate-limit (file API đã làm đúng) |
 | Mất HSTS/security header | `add_header` trong `location /health` ghi đè server | File API **không** dùng `add_header` trong location proxy |
 
-> Sau proxy, `/health` không còn `"phase":"static"` — cập nhật monitor note ở §12 khi deploy xong.
+> `/health` sau deploy đã là JSON API — §12 đã cập nhật tương ứng.
+
+### 17.5. Kết quả deploy thật 21/11/2026 04:45 UTC
+
+| Hạng mục | Kết quả |
+|---|---|
+| Node | `v22.23.5` tại `/usr/bin/node` (NodeSource) |
+| Code | `week-4-api` commit `189056f` → `/opt/internship-tracker/server` |
+| DB | Neon `neondb`, `db:check` OK, `db:setup` applied schema + seed |
+| Service | `internship-tracker.service` **active (running)**, `/usr/bin/node src/index.js`, listen `127.0.0.1:3000` |
+| Nginx | Bản API thay bản tĩnh; `nginx -t` OK; `location = /health` đếm = 1; HTTP vẫn 301 |
+| Preflight | **Không có dòng FAIL** — đầy đủ Node, .env, API local, HTTPS ngoài, ufw không mở 3000 |
+| Ngoài | `https://.../health` → `{"status":"ok","uptime":...,"version":"0.1.0"}`; `/applications` → 200 array |
+| Evidence | `docs/evidence/21-api-deploy.txt` |
+
+> Backup config tĩnh: `/etc/nginx/sites-available/internship-tracker.static.bak` (để rollback nếu cần).
+
+**Tiếp theo (phía bạn/Anh Mỹ):** approve PR `week-4-api → main` → merge commit → build Pages với `VITE_API_URL=https://internship-tracker.duckdns.org/applications` → smoke test thêm/sửa/xoá đơn.

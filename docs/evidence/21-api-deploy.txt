@@ -1,0 +1,95 @@
+# Deploy API lên VM — 21/11/2026 04:45 UTC
+
+Nguồn code: branch `week-4-api`, commit **189056f** (worktree detach).
+Người thực hiện: Nam (infra), chạy qua `ssh staging` từ `C:\dev\internship_tracker`.
+Secret `DATABASE_URL` lưu Bitwarden `Trial A — DATABASE_URL`, ghi vào
+`/opt/internship-tracker/server/.env` (chmod 600), KHÔNG commit.
+
+## 1. Node.js
+
+```text
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v            -> v22.23.5
+npm -v             -> 10.9.9
+command -v node    -> /usr/bin/node
+```
+
+## 2. Code + dependencies
+
+```text
+scp -r server deploy@40.83.74.1:/opt/internship-tracker/
+cd /opt/internship-tracker/server && npm ci
+added 167 packages, audited 168 packages
+found 0 vulnerabilities
+```
+
+## 3. Database (Neon, external)
+
+```text
+npm run db:check
+{
+  database: 'neondb',
+  user: 'neondb_owner',
+  now: 2026-11-21T04:41:07.227Z
+}
+
+npm run db:setup
+Applied schema.sql
+Applied seed.sql
+```
+
+> Cảnh báo pg về `sslmode=require` → alias `verify-full` chỉ là warning, không lỗi.
+
+## 4. systemd
+
+```text
+scp deploy/internship-tracker.service -> /etc/systemd/system/internship-tracker.service
+sudo systemctl enable --now internship-tracker
+
+● internship-tracker.service - Internship Tracker API
+     Active: active (running) since Sat 2026-11-21 04:42:02 UTC
+   Main PID: 3723 (node)
+        └─3723 /usr/bin/node src/index.js
+Nov 21 04:42:02 node[3723]: API listening on http://127.0.0.1:3000
+```
+
+## 5. Nginx (thay bản tĩnh)
+
+```text
+Backup: /etc/nginx/sites-available/internship-tracker.static.bak
+File mới: infra/nginx/internship-tracker-api.conf
+  - location = /health        -> proxy http://127.0.0.1:3000/health  (KHÔNG rate-limit)
+  - location /applications    -> proxy http://127.0.0.1:3000/applications (có limit_req)
+  - location /                -> static + limit_req
+sudo nginx -t   -> syntax is ok / test is successful
+sudo systemctl reload nginx  -> OK
+```
+
+## 6. Preflight (infra/scripts/preflight-api.sh)
+
+```text
+node=v22.23.5 npm=10.9.9          OK node>=22
+systemd: active
+.env ton tai / DATABASE_URL co / CORS_ORIGIN co / khong phai localhost  OK
+GET http://127.0.0.1:3000/health -> 200                                  OK
+nginx -t OK; so location = /health : 1 (khong duplicate)                 OK
+GET https://internship-tracker.duckdns.org/health        -> 200
+GET https://internship-tracker.duckdns.org/applications  -> 200
+GET http://internship-tracker.duckdns.org/health         -> 301
+ufw: khong mo 3000                                                        OK
+```
+
+## 7. Kết quả từ ngoài
+
+```text
+GET https://internship-tracker.duckdns.org/health
+{"status":"ok","uptime":165,"version":"0.1.0"}
+
+GET https://internship-tracker.duckdns.org/applications
+[{"id":"3","company":"Local startup","role":"Fullstack Intern",...},
+ {"id":"1","company":"Shopee",...}, ...]
+```
+
+> `/health` giờ là JSON của API (không còn `"phase":"static"`).
+> UptimeRobot vẫn xanh vì monitor chỉ check HTTP 200.
