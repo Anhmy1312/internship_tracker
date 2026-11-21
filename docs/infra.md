@@ -447,7 +447,7 @@ curl -sS https://internship-tracker.duckdns.org/health
 **Việc còn phải làm trước 29/11:**
 
 - [x] Activity log đã check: Caller = **Nam (owner Azure)**, 4 lần `Deallocate Virtual Machine` vào 17/11, 18/11, 19/11, 20/11. Không có policy auto-shutdown trong log.
-- [ ] Vào **Operations → Auto-shutdown** xác nhận trạng thái **Disabled** (nếu Enabled → tắt ngay).
+- [x] Auto-shutdown đã verify **Off** lúc 21/11 12:31 (Azure Portal → Operations → Auto-shutdown). Không có lịch tắt tự động.
 - [x] Từ giờ đến demo: **không deallocate VM**. Nếu cần tiết kiệm credit → dùng **budget alert**, không tắt VM.
 - [x] Discord **mobile push** cho `#alert` đã bật + test notification nhận được.
 - [x] Nguyên tắc: **không Deallocate VM khi monitor đang bật**; nếu bắt buộc tắt → Pause cả 4 monitor trước (negative test Pause đã PASS, §12).
