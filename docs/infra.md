@@ -162,7 +162,7 @@ sudo systemctl stop nginx        # dùng để test alert (site chết)
 sudo systemctl start nginx
 ```
 
-> **VM đang Stopped/Deallocated (Azure):** Portal (tài khoản Azure của Anh Mỹ) → `vm-it-staging` → **Start**, chờ 1–2 phút rồi mới `ssh`/`curl`. IP tĩnh `40.83.74.1` giữ nguyên; nếu IP đổi thì cập nhật DuckDNS **trước khi** test monitor.
+> **VM đang Stopped/Deallocated (Azure):** Portal (tài khoản Azure của **Nam**) → `vm-it-staging` → **Start**, chờ 1–2 phút rồi mới `ssh`/`curl`. IP tĩnh `40.83.74.1` giữ nguyên; nếu IP đổi thì cập nhật DuckDNS **trước khi** test monitor.
 
 `nginx -t` **trước** mọi `reload`. Không có service app nào khác trong trial.
 
@@ -366,7 +366,7 @@ Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `doc
 
 > `/health` giờ là JSON của API (`{"status":"ok","uptime":...,"version":"0.1.0"}`) sau khi deploy 21/11 — 200 không chứng minh site còn file. Monitor **Site** bắt trường hợp mất `index.html`; giữ nguyên monitor Health. *(Trước deploy: JSON tĩnh có `"phase":"static"`.)*
 
-> **Trước khi tạo monitor Site:** VM phải **đang chạy**. Azure Portal (tài khoản Anh Mỹ) → `vm-it-staging` → **Start**; chờ 1–2 phút; verify `curl https://.../health` = 200 và `curl https://.../` = 200 rồi mới Add monitor. Tạo monitor khi VM tắt → monitor đỏ ngay, alert giả.
+> **Trước khi tạo monitor Site:** VM phải **đang chạy**. Azure Portal (tài khoản Azure của **Nam**) → `vm-it-staging` → **Start**; chờ 1–2 phút; verify `curl https://.../health` = 200 và `curl https://.../` = 200 rồi mới Add monitor. Tạo monitor khi VM tắt → monitor đỏ ngay, alert giả.
 >
 > **Trạng thái 20/11 00:35 UTC:** 22/80/443 mở, `/` 200, `/health` 200 (kiểm tra cả từ ngoài). Thông tin "site down từ 18:43 19/11" là trạng thái cũ (VM đã được Start lại) — trước khi kết luận, luôn kiểm tra 3 port + HTTPS.
 >
@@ -397,9 +397,9 @@ Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `doc
 | 29/11 08:00 → demo xong | **Anh Mỹ** | Như trên; là đầu mối trong buổi demo |
 
 - Quá **15 phút** không ai xác nhận → **gọi điện** cho người còn lại (Discord có thể bị trễ/điện thoại tắt thông báo).
-- **⚠️ Quyền Start VM:** Nam trực đêm nhưng hiện **chỉ account Azure Anh Mỹ bật được VM**; có SSH cũng không cứu được nếu VM bị deallocate. Trước **23/11** phải chốt một trong hai:
-  - Anh Mỹ add Nam role **Virtual Machine Contributor** trên `vm-it-staging` (☐), **hoặc**
-  - **Đóng băng VM** (không deallocate) đến hết demo 29/11 (☐).
+- **⚠️ Quyền Start VM:** **Nam là owner tài khoản Azure** (`2451052160nam@ou.edu.vn`) → tự Start được VM, không cần Anh Mỹ add role. Anh Mỹ chỉ là owner **repo GitHub** (approve/merge PR). Việc cần chốt trước **23/11**:
+  - **Không deallocate VM** từ 23→29/11; nếu bắt buộc tắt → Pause cả 4 monitor trước (negative test đã PASS) (☐).
+  - Dùng **budget alert** nếu cần kiểm soát credit, không dùng Stop/Deallocate.
 - Discord **mobile push** cho `#alert` phải bật trước 29/11 (xem §13.1). Email là kênh dự phòng đã verify.
 
 **Đã test alert:** 21/11/2026 (làm sớm 19/11) — stop nginx lúc 00:00 UTC, nhận alert lúc 00:06 UTC, độ trễ **6 phút**. Ảnh `docs/evidence/21-alert.png`.
@@ -446,7 +446,7 @@ curl -sS https://internship-tracker.duckdns.org/health
 
 **Việc còn phải làm trước 29/11:**
 
-- [ ] Azure Portal (account **Anh Mỹ**) → `vm-it-staging` → **Activity log** → kiểm tra **cả 4 lần shutdown trong 4 ngày** (17/11 10:41, 18/11 09:24, 19/11 18:19, 20/11 09:43 local) → xem **Caller** là user hay policy **Auto-shutdown**. Partner đang check hôm nay.
+- [ ] Azure Portal (account **Nam** — owner Azure) → `vm-it-staging` → **Activity log** → kiểm tra **cả 4 lần shutdown trong 4 ngày** (17/11 10:41, 18/11 09:24, 19/11 18:19, 20/11 09:43 local) → xem **Caller** là user hay policy **Auto-shutdown**. Nam tự check; partner chỉ giám sát.
 - [ ] Nếu có **Auto-shutdown** → **tắt ngay** trước 29/11 (VM phải sống trong demo).
 - [ ] Từ giờ đến demo: **không ai deallocate VM**. Nếu cần tiết kiệm credit → dùng **budget alert**, không tắt VM.
 - [ ] Ghi actor/lịch shutdown vào mục này khi có kết quả.
