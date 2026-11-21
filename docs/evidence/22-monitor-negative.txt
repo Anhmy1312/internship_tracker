@@ -1,5 +1,7 @@
 # Negative test 2 monitor Redirect + Pages — 21/11/2026
 
+> Tên file `22-monitor-negative.txt` theo yêu cầu partner; thời gian chạy thật là 21/11.
+
 Mục đích: chứng minh **monitor Redirect và Pages thực sự bắn alert khi Down**.
 Khác với negative test Pause (chứng minh Pause chặn alert), test này **chỉ sửa cấu hình monitor**,
 **KHÔNG tắt nginx** — site/API vẫn chạy bình thường.

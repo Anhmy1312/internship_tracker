@@ -387,7 +387,7 @@ Ghi `T0/T1/T2`, người trực, độ trễ và ảnh chụp `#alert` vào `doc
 
 > **Negative test Pause ✅ PASS 20/11:** Pause 4 monitor lúc 08:41:51 UTC → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG có tin mới** (tin cuối vẫn là 14:52 local) → start nginx lúc 08:48:53 UTC → Resume 4 monitor. Verify: nginx active, `/health` 200, `/` 200. Evidence: `docs/evidence/20-negative-pause.txt`. Drill 25/11 có thể Pause an toàn.
 
-> **Negative test alert 2 monitor Redirect + Pages ✅ PASS 21/11:** chỉ sửa monitor (Redirect URL → route 404; Pages keyword → `ZZZ_NEGATIVE_TEST_ZZZ`), **không tắt nginx**. Discord `#alert` nhận 2 tin DOWN lúc ~07:59 UTC (`HTTP 404 - Not Found`, `Keyword Does Not Exist`), UI báo Down 5'39"/5'09" trong khi `/health` + `internship-tracker site` vẫn Up. Khôi phục xong cả 4 monitor Up. Evidence: `docs/evidence/21-negative-alert-2monitors.txt`. Kết hợp với test Pause → chu trình alert hoàn chỉnh.
+> **Negative test alert 2 monitor Redirect + Pages ✅ PASS 21/11:** chỉ sửa monitor (Redirect URL → route 404; Pages keyword → `ZZZ_NEGATIVE_TEST_ZZZ`), **không tắt nginx**. Discord `#alert` nhận 2 tin DOWN lúc ~07:59 UTC (`HTTP 404 - Not Found`, `Keyword Does Not Exist`), UI báo Down 5'39"/5'09" trong khi `/health` + `internship-tracker site` vẫn Up. Khôi phục xong cả 4 monitor Up. Evidence: `docs/evidence/22-monitor-negative.txt` (tên file theo partner; chạy 21/11). Kết hợp với test Pause → chu trình alert hoàn chỉnh.
 
 > **Alert contacts — chốt 20/11:** email của Nam (lưu Bitwarden) (event: Up + Down) **đã verify và nhận test notification thành công**; **Discord integration #1** được tick trên **cả 4 monitor** (đã kiểm tra từng monitor qua UI). Test gửi cả 2 kênh cùng lúc → email + Discord đều nhận. Cấu hình email tổng tại `dashboard.uptimerobot.com/account/notifications`. SMS/Voice không dùng (cần plan trả phí).
 
@@ -578,7 +578,7 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 
 > **Quyết định chọn B (GitHub Actions):** repo Public → Actions miễn phí, không commit `dist/`, URL production nằm trong workflow, rollback = re-run job. `client/vite.config.ts` có `base: '/internship_tracker/'`; workflow `.github/workflows/deploy-pages.yml` trigger `push main`, `permissions: pages:write + id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`.
 
-> ⚠️ **main đang thiếu 3 file hạ tầng**: `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh` → VM chết là không rebuild được. Đã mở **PR #8** (`infra/rebuild-files-to-main → main`, commit `510d824`) đưa 3 file này lên main trước 25/11. Chờ Anh Mỹ approve + merge.
+> ✅ **PR #8 đã merge vào `main`**: `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh` (commit `510d824`). VM chết giờ rebuild được từ main. Branch `deploy/pages-actions` (PR #6 trùng) đã xoá; PR #6 closed.
 
 ## 19. Lịch còn lại sau deploy 21/11
 
@@ -592,5 +592,5 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 | 28/11 20:00 | **Nam trực #alert** đến hết demo 29/11 (SLA 15') | ☐ |
 | Sau 29/11 | 1 PR close-out duy nhất (protection + webhook + monitor + drill) | ☐ branch `infra/week2-closeout` sẵn |
 
-- PR nhỏ **#8** (3 file rebuild) phải merge trước 25/11 — đây là PR hạ tầng, không phải PR lẻ về docs.
+- PR nhỏ **#8** (3 file rebuild) **đã merge** — đây là PR hạ tầng, không phải PR lẻ về docs.
 - **Không deallocate VM** từ giờ đến hết demo.
