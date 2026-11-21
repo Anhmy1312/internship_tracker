@@ -460,7 +460,7 @@ curl -sS https://internship-tracker.duckdns.org/health
 - [x] fail2ban jail cho Nginx — **xong 20/11** (sớm, kế hoạch 24/11): `infra/fail2ban/jail.d/internship-tracker.local`; jails `nginx-limit-req` (429 → ban 1h) + `nginx-botsearch` (path khai thác 404 → ban 24h); `backend=polling` vì nginx ghi log file; đã ban thật rồi unban; bằng chứng `docs/evidence/24-fail2ban-nginx.txt`
 - [x] Log rotation — **xong 20/11**: dùng `/etc/logrotate.d/nginx` có sẵn (daily, rotate 14, compress, delaycompress); đã `logrotate -f`, thấy `.1`/`.2.gz`, nginx vẫn active; cùng evidence 24
 - [ ] Tách TLS-expiry alert riêng (hiện có qua Discord integration nhưng chưa có monitor chuyên biệt)
-- [x] Deploy API Express + Neon lên VM — **xong 21/11** (sớm, kế hoạch 22/11): Node 22 LTS, systemd `internship-tracker`, Neon `neondb` (schema + seed), Nginx proxy `/health` + `/applications`; nguồn `week-4-api` commit `189056f`; evidence `docs/evidence/21-api-deploy.txt`
+- [x] Deploy API Express + Neon lên VM — **xong 21/11**: Node 22 LTS, systemd `internship-tracker`, Neon `neondb` (schema + seed), Nginx proxy `/health` + `/applications`; nguồn `week-4-api`; evidence `docs/evidence/21-api-deploy.txt`
 - [ ] API Week 5: auth cho POST/PATCH/DELETE, TLS-expiry monitor riêng, backup DB trước demo — auth là Week 5
 - [ ] Chọn kiến trúc client: GitHub Pages (cần CORS `https://anhmy1312.github.io`) hay phục vụ từ VM (same-origin, không cần CORS). `VITE_API_URL` là build-time → đổi URL phải build lại.
 - [ ] Docker: **port publish đi xuyên ufw** — khi thêm Docker phải bind `127.0.0.1:PORT:PORT` hoặc thêm rule `DOCKER-USER`
@@ -501,9 +501,9 @@ Branch protection: `Require a pull request` + **1 approval**. Với team 2 ngư�
 
 ---
 
-## 17. Deploy API lên VM (kế hoạch 22/11 — cập nhật theo partner)
+## 17. Deploy API lên VM (thực tế 21/11)
 
-> ⚠️ Kế hoạch gốc ghi “Node/systemd chỉ sau 29/11”. Partner đổi sang deploy 22/11 → phải cập nhật `docs/handoff-partner-23-11.md` trong PR close-out cho khớp.
+> Kế hoạch gốc ghi “Node/systemd chỉ sau 29/11”. Partner điều chỉnh sang deploy trước demo; thực tế **xong 21/11**. `docs/handoff-partner-23-11.md` đã cập nhật cho khớp.
 
 ### 17.1. Chuẩn bị
 
@@ -572,6 +572,8 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 
 > Backup config tĩnh: `/etc/nginx/sites-available/internship-tracker.static.bak` (để rollback nếu cần).
 
-**Tiếp theo (phía bạn/Anh Mỹ):** approve PR **#6** (`deploy/pages-actions → main`) → merge commit → **Settings → Pages → Source = GitHub Actions** → kiểm tra Action xanh → smoke test thêm/sửa/xoá đơn.
+**Deploy xong 21/11:** PR **#7** (`week-4-api → main`) đã merge, workflow `Deploy client to Pages` run **44880908036 completed/success**, Pages đang serve `/internship_tracker/assets/...`. PR **#6** (`deploy/pages-actions`) là bản trùng → đã **đóng, không merge, branch đã xoá**. Không deploy lại 23/11.
 
-> **Quyết định 22/11 — chọn B (GitHub Actions):** repo Public → Actions miễn phí, không commit `dist/`, URL production nằm trong workflow, rollback = re-run job. `client/vite.config.ts` thêm `base: '/internship_tracker/'` (đã verify build trên VM Node 22: `dist/index.html` trỏ `/internship_tracker/assets/...`, bundle chứa URL API). Workflow `.github/workflows/deploy-pages.yml` trigger `push main`, `permissions: pages:write + id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`. PR #6 head `436b7eb`.
+> **Quyết định chọn B (GitHub Actions):** repo Public → Actions miễn phí, không commit `dist/`, URL production nằm trong workflow, rollback = re-run job. `client/vite.config.ts` có `base: '/internship_tracker/'`; workflow `.github/workflows/deploy-pages.yml` trigger `push main`, `permissions: pages:write + id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`.
+
+> ⚠️ **main đang thiếu 3 file hạ tầng**: `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh` → VM chết là không rebuild được. Đã mở PR nhỏ đưa 3 file này lên main trước 25/11 (xem §19).
