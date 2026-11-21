@@ -576,4 +576,18 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 
 > **Quyết định chọn B (GitHub Actions):** repo Public → Actions miễn phí, không commit `dist/`, URL production nằm trong workflow, rollback = re-run job. `client/vite.config.ts` có `base: '/internship_tracker/'`; workflow `.github/workflows/deploy-pages.yml` trigger `push main`, `permissions: pages:write + id-token:write`, env `VITE_API_URL=https://internship-tracker.duckdns.org/applications`.
 
-> ⚠️ **main đang thiếu 3 file hạ tầng**: `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh` → VM chết là không rebuild được. Đã mở PR nhỏ đưa 3 file này lên main trước 25/11 (xem §19).
+> ⚠️ **main đang thiếu 3 file hạ tầng**: `infra/nginx/internship-tracker-api.conf`, `infra/fail2ban/jail.d/internship-tracker.local`, `infra/scripts/preflight-api.sh` → VM chết là không rebuild được. Đã mở **PR #8** (`infra/rebuild-files-to-main → main`, commit `510d824`) đưa 3 file này lên main trước 25/11. Chờ Anh Mỹ approve + merge.
+
+## 19. Lịch còn lại sau deploy 21/11
+
+| Ngày | Việc | Trạng thái |
+|---|---|---|
+| 23/11 | **Không deploy lại** (API + Pages đã live từ 21/11) | ✅ |
+| 24/11 | fail2ban Nginx + log rotation | ✅ xong từ 20/11 |
+| 25–26/11 | Rebuild drill theo runbook §11 (bước 14–15 + §11.2), Pause 4 monitor khung 00:00–02:00 | ☐ |
+| 27/11 | Drill đo phản ứng alert theo §11.3 | ☐ |
+| 28/11 20:00 | **Nam trực #alert** đến hết demo 29/11 (SLA 15') | ☐ |
+| Sau 29/11 | 1 PR close-out duy nhất (protection + webhook + monitor + drill) | ☐ branch `infra/week2-closeout` sẵn |
+
+- PR nhỏ **#8** (3 file rebuild) phải merge trước 25/11 — đây là PR hạ tầng, không phải PR lẻ về docs.
+- **Không deallocate VM** từ giờ đến hết demo.
