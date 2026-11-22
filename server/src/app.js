@@ -1,14 +1,27 @@
 const express = require("express");
 const cors = require("cors");
 const { query } = require("./db");
-const { applicationSchema, parseId, applicationPatchSchema } = require("./validation");
+const { applicationSchema,
+    applicationPatchSchema,
+    registerSchema,
+    loginSchema,
+    parseId,
+} = require("./validation");
+
+const {
+    hashPassword,
+    verifyPassword,
+    signToken,
+    requireAuth,
+} = require("./auth");
 
 const API_VERSION = process.env.API_VERSION || "0.1.0";
 const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
-const DEMO_USER_ID = Number(process.env.DEMO_USER_ID || 1);
+
+const DUMMY_HASH = "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 const COLUMNS = {
     company: "company",
@@ -42,6 +55,14 @@ function toApi(row) {
     };
 }
 
+function toUser(row) {
+    return {
+        id: row.id,
+        email: row.email,
+        name: row.name,
+    };
+}
+
 app.get("/health", (_req, res) => {
     res.set("Cache-control", "no-store");
     res.json({
@@ -51,14 +72,99 @@ app.get("/health", (_req, res) => {
     });
 });
 
-app.get("/applications", async (_req, res) => {
+app.post("/auth/register", async (req, res) => {
+    const result = registerSchema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            error: "Invalid input",
+            details: result.error.issues.map((issues) => ({
+                path: issues.path,
+                message: issues.message,
+            })),
+        });
+    }
+
+    const email = result.data.email.trim().toLowerCase();
+    const name = result.data.name.trim();
+    const passwordHash = await hashPassword(result.data.password);
+
+    const { rows } = await query(
+        `INSERT INTO users (email, password_hash, name)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (email) DO NOTHING
+        RETURNING id, email, name`,
+        [email, passwordHash, name],
+    );
+
+    if (rows.length === 0) {
+        return res.status(409).json({ error: "Email already registered" });
+    }
+
+    const user = toUser(rows[0]);
+    return res.status(201).json({ token: signToken(user.id), user });
+});
+
+app.post("/auth/login", async (req, res) => {
+    const result = loginSchema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            error: "Invalid input",
+            details: result.error.issues.map((issues) => ({
+                path: issues.path,
+                message: issues.message,
+            })),
+        });
+    }
+
+    const email = result.data.email.trim().toLowerCase();
+    const { rows } = await query(
+        `SELECT id, email, name, password_hash
+        FROM users
+        WHERE email = $1`,
+        [email],
+    );
+
+    const row = rows[0];
+    const passwordOk = await verifyPassword(
+        result.data.password,
+        row ? row.password_hash : DUMMY_HASH,
+    );
+
+    if (!row || !passwordOk) {
+        return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const user = toUser(row);
+    return res.status(200).json({ token: signToken(user.id), user });
+});
+
+app.get("/auth/me", requireAuth, async (req, res) => {
+    const { rows } = await query(
+        `SELECT id, email, name
+        FROM users 
+        WHERE id = $1`,
+        [req.user.id],
+    );
+
+    if (rows.length === 0) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    return res.json({ user: toUser(rows[0]) });
+});
+
+app.use("/applications", requireAuth);
+
+app.get("/applications", async (req, res) => {
     const { rows } = await query(
         `SELECT id, company, role, jd_url, location, remote,
             deadline::text AS deadline, status, notes
         FROM applications
         WHERE user_id = $1
         ORDER BY deadline ASC NULLS LAST, created_at DESC`,
-        [DEMO_USER_ID],
+        [req.user.id],
     );
     res.json(rows.map(toApi));
 });
@@ -75,7 +181,7 @@ app.get("/applications/:id", async (req, res) => {
             deadline::text AS deadline, status, notes
         FROM applications
         WHERE id = $1 AND user_id = $2`,
-        [id, DEMO_USER_ID],
+        [id, req.user.id],
     );
 
     if (rows.length === 0) {
@@ -107,7 +213,7 @@ app.post("/applications", async (req, res) => {
             RETURNING id, company, role, jd_url, location, remote,
                 deadline::text AS deadline, status, notes`,
         [
-            DEMO_USER_ID,
+            req.user.id,
             data.company,
             data.role,
             data.jdUrl,
@@ -158,7 +264,7 @@ app.patch("/applications/:id", async (req, res) => {
     values.push(id);
     const idParam = values.length;
 
-    values.push(DEMO_USER_ID);
+    values.push(req.user.id);
     const userParam = values.length;
 
     const { rows } = await query(
@@ -188,7 +294,7 @@ app.delete("/applications/:id", async (req, res) => {
         `DELETE FROM applications
         WHERE id = $1 AND user_id = $2
         RETURNING id`,
-        [id, DEMO_USER_ID],
+        [id, req.user.id],
     );
 
     if (rows.length === 0) {
@@ -211,5 +317,6 @@ app.use((error, _req, res, _next) => {
     console.error(error);
     return res.status(500).json({ error: "Internal server error" });
 });
+
 
 module.exports = { app };

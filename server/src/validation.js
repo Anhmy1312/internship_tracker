@@ -22,7 +22,16 @@ const applicationPatchSchema = z.object({
     notes: z.string().max(2000).optional(),
 });
 
+const registerSchema = z.object({
+    email: z.email(),
+    password: z.string().min(8).max(72),
+    name: z.string().trim().min(1).max(100),
+});
 
+const loginSchema = z.object({
+    email: z.email(),
+    password: z.string().min(1).max(72),
+});
 
 function parseId(value) {
     if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)) return null;
@@ -30,4 +39,10 @@ function parseId(value) {
     return Number.isSafeInteger(n) ? n : null;
 }
 
-module.exports = { applicationSchema, applicationPatchSchema, parseId };
+module.exports = {
+    applicationSchema,
+    applicationPatchSchema,
+    registerSchema,
+    loginSchema,
+    parseId
+};
