@@ -254,16 +254,131 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 | 10 | **Copy snippets** | `sudo mkdir -p /etc/nginx/snippets`; copy `tls.conf`, `security.conf` → `/etc/nginx/snippets/`; copy `rate-limit.conf` → `/etc/nginx/conf.d/rate-limit.conf` (zone `it_limit` nằm ở `http` context). **Thiếu = `nginx -t` fail** | 1 | ☐ |
 | 11 | Site config pha 1 (HTTP) | copy `internship-tracker.http.conf` → `/etc/nginx/sites-available/internship-tracker`; symlink `sites-enabled`; xoá `default`; `nginx -t`, reload | 2 | ☐ |
 | 12 | Certbot | `certbot certonly --nginx -d internship-tracker.duckdns.org --dry-run` rồi bỏ `--dry-run`; kiểm tra `certbot certificates` | 3 | ☐ |
-| 13 | Đổi sang config pha 2 (HTTPS) | copy `internship-tracker.conf` → `sites-available/internship-tracker`; `nginx -t`, reload | 1 | ☐ |
-| 14 | Verify thật | `curl -sS https://.../health` (đọc **body**, không chỉ `curl -I`); `curl -sS -o /dev/null -w '%{http_code}' https://.../`; HTTP phải 301; test rate limit **15 request liên tục → 6 × 200 rồi 429** (burst 5 + 1 request đầu); SSL Labs | 3 | ☐ |
-| | **Tổng** | mục tiêu ≤ 30 (thực tế có thể 35–45 do cert issuance + DuckDNS lan) | **~32** | ☐ |
+| 13 | Đổi sang config pha 2 (HTTPS) **bản API** | copy `infra/nginx/internship-tracker-api.conf` → `/etc/nginx/sites-available/internship-tracker`; `nginx -t`, reload. `/health` + `/applications` proxy sang `127.0.0.1:3000` (file đã lên `main` qua PR #8) | 1 | ☐ |
+| 14 | **Cài Node 22 LTS** | `curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs`; `node -v` phải `v22.x` (dùng `/usr/bin/node`, không dùng nvm) | 3 | ☐ |
+| 15 | **Deploy server + DB** | `scp -r server deploy@IP:/opt/internship-tracker/`; `cd /opt/internship-tracker/server && npm ci`; ghi `.env` (`DATABASE_URL` từ Bitwarden, `PORT=3000`, `CORS_ORIGIN=https://anhmy1312.github.io`, `API_VERSION=0.1.0`, `DEMO_USER_ID=1`), `chmod 600 .env`; `npm run db:check && npm run db:setup` | 4 | ☐ |
+| 16 | **systemd API** | copy `deploy/internship-tracker.service` → `/etc/systemd/system/`; `daemon-reload`; `enable --now internship-tracker`; phải `active (running)` | 2 | ☐ |
+| 17 | **Fail2ban jail cho Nginx** | Copy `infra/fail2ban/jail.d/internship-tracker.local` → `/etc/fail2ban/jail.d/`; `sudo fail2ban-client -t`; `sudo systemctl restart fail2ban`; `sudo fail2ban-client status` phải thấy `nginx-limit-req` + `nginx-botsearch` (chi tiết §11.1) | 3 | ☐ |
+| 18 | **Kiểm tra log rotation** | `sudo logrotate -d /etc/logrotate.d/nginx`; `sudo logrotate -f /etc/logrotate.d/nginx`; `ls -lh /var/log/nginx/internship-tracker.*` thấy `.1`/`.2.gz`; `df -h /` | 1 | ☐ |
+| 19 | Verify thật | `curl -sS https://.../health` → JSON **API** `{"status":"ok","uptime":...,"version":"0.1.0"}`; `curl .../applications` → 200 array 3 đơn; `curl https://.../` → 200 HTML; HTTP → 301; CRUD 1 đơn (thêm → reload còn → xoá, DB lại 3 seed); `sudo fail2ban-client status` → 3 jail; logrotate `.1`/`.2.gz`; test rate limit vào **`/`** 15 request → 6×200 rồi 429 (**KHÔNG test trên `/health`** vì location riêng, không bị limit). Chạy `bash infra/scripts/preflight-api.sh` | 5 | ☐ |
+| | **Tổng** | mục tiêu ≤ 50 (thực tế 45–55 do cert issuance + npm ci + DuckDNS lan) | **~48** | ☐ |
 
-Nếu vượt 30 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước. Đo **giờ thật**, đừng ước lượng.
+Nếu vượt 50 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước. Đo **giờ thật**, đừng ước lượng.
 
-> ⚠️ Ba lỗi chỉ lộ khi rebuild từ máy trắng (đã phát hiện trước drill 25–26):
+> ⚠️ Bốn lỗi chỉ lộ khi rebuild từ máy trắng (đã phát hiện trước drill 25–26):
 > 1. `bootstrap.sh` **không cài nginx/certbot** → phải có bước 9.
 > 2. Thiếu `tls.conf`/`security.conf` → `include` báo file not found; thiếu `rate-limit.conf` → `zone "it_limit" does not exist`.
 > 3. Copy zone file **trước** site config, nếu không `nginx -t` fail.
+> 4. Runbook cũ rebuild bản **static**, thiếu Node/server/.env/systemd → `/applications` 404, không CRUD được. Đã thêm bước 14–16 và dùng `internship-tracker-api.conf` ở bước 13.
+
+### 11.1. Chi tiết bước 17–18 (fail2ban + logrotate)
+
+`bootstrap.sh` chỉ cấu hình jail `sshd`; VM rebuild **không tự có** jail Nginx. Copy file:
+
+```bash
+scp -i <key> infra/fail2ban/jail.d/internship-tracker.local deploy@IP:/tmp/
+ssh -i <key> deploy@IP "sudo install -m 644 -o root -g root /tmp/internship-tracker.local /etc/fail2ban/jail.d/ && sudo fail2ban-client -t && sudo systemctl restart fail2ban && sudo fail2ban-client status"
+```
+
+Kỳ vọng: `Number of jail: 3` và danh sách có `nginx-botsearch`, `nginx-limit-req`, `sshd`.
+
+Vì sao `backend = polling`: Ubuntu đặt `backend = systemd`; nginx ghi log ra file nên phải đọc file, không đọc journal. `ignoreip` giữ localhost để curl nội bộ không bị ban.
+
+Test thật (làm trên VM, không cần mở firewall thêm):
+
+```bash
+# 1) Rate limit: 20 request qua hostname công khai → 200/429 rồi bị ban
+for i in {1..20}; do curl -s -o /dev/null -w '%{http_code} ' --max-time 5 \
+  https://internship-tracker.duckdns.org/; done; echo
+sudo fail2ban-client status nginx-limit-req
+sudo fail2ban-client set nginx-limit-req unbanip <IP trong Banned IP list>
+
+# 2) Bot search: 3 request path khai thác → 404 rồi bị ban
+for i in 1 2 3; do curl -s -o /dev/null -w '%{http_code}\n' \
+  https://internship-tracker.duckdns.org/wp-login.php; done
+sudo fail2ban-client status nginx-botsearch
+sudo fail2ban-client set nginx-botsearch unbanip <IP>
+```
+
+> Test từ VM qua hostname sẽ ban IP công khai của chính VM (`40.83.74.1`), **không ảnh hưởng người dùng thật**; unban ngay. Không test bằng `127.0.0.1` vì nằm trong `ignoreip`.
+
+Log rotation: **không tạo file mới**, dùng `/etc/logrotate.d/nginx` có sẵn (`daily`, `rotate 14`, `compress`, `delaycompress`, `notifempty`, `create 0640 www-data adm`, `postrotate invoke-rc.d nginx rotate`). Nó áp cho `*.log`, gồm cả `internship-tracker.*.log`. Kiểm tra:
+
+```bash
+sudo logrotate -d /etc/logrotate.d/nginx     # dry-run: xem log nào sẽ xoay
+sudo logrotate -f /etc/logrotate.d/nginx     # xoay thật
+ls -lh /var/log/nginx/internship-tracker.*   # phải có .1 và .2.gz
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+> Không thêm entry logrotate trùng đường dẫn — logrotate báo `duplicate log entry` và bỏ qua.
+
+Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
+
+### 11.2. Checklist bổ sung cho drill 25–26 (review 20/11)
+
+1. **SSH host key đổi sau rebuild:** `ssh staging` báo `REMOTE HOST IDENTIFICATION HAS CHANGED` → chạy `ssh-keygen -R 40.83.74.1` rồi SSH lại. **Không phải bị tấn công.**
+2. **Certbot rate limit:** tối đa 5 cert trùng/tuần. Chỉ chạy lại `certbot certonly` **sau khi** `curl http://<host>/` đã 200 qua DNS mới; không gọi lại liên tục lúc rebuild hỏng.
+3. **Thứ tự sau rebuild (IP tĩnh giữ nguyên):**
+   `IP tĩnh → DNS DuckDNS → bootstrap.sh → nginx config (snippets) → deploy.sh (4 file tĩnh) → TLS/certbot → Node 22 + server + .env + npm ci + db:setup + systemd → 3 jail fail2ban → ufw/NSG → verify /health, /applications, /, 301 + CRUD → resume monitor.`
+4. **Evidence:** file `docs/evidence/25-26-drill.txt` — khi drill thật **append entry mới**, KHÔNG ghi đè (giữ lại entry dry-run 20/11).
+5. **Pause/Resume:** đúng **4 monitor đang có** (Health + Site + Redirect + Pages) — tất cả đều gửi alert Discord; xem §12.
+6. **Cửa sổ Pause:** 25/11 **00:00 → 02:00** (2 giờ), rebuild xong resume + verify ngay; không pause 24h.
+7. **Negative test Pause — ✅ ĐÃ TEST 20/11:** Pause 4 monitor → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG** có tin mới → resume + start nginx. Kết quả PASS, evidence `20-negative-pause.txt`. Nếu có tin → Pause hỏng, drill sẽ bắn alert giả.
+
+### 11.3. Drill gộp 25/11 + đo alert 27/11 (chốt 23/11)
+
+**Nguyên tắc:** đo alert **SAU khi Resume monitor**, không đo lúc đang Pause.
+
+#### A. Khung 25/11 00:00 → 02:00 (drill rebuild)
+
+```text
+00:00  Pause cả 4 monitor (Health + Site + Redirect + Pages)
+       Giữ VM CŨ: Stop/Deallocate có, nhưng KHÔNG xoá disk/resource đến 26/11.
+       (Static IP 40.83.74.1 phải detach khỏi VM cũ để gắn sang VM mới.)
+
+00:00–02:00  Rebuild theo §11 + verify:
+       /health 200 (JSON API), / 200, HTTP → 301
+       3 jail fail2ban active; logrotate -f có .1/.2.gz
+       CRUD 1 đơn test (thêm → reload còn → xoá), DB lại 3 seed
+       Ghi GIỜ THẬT từng bước vào bảng §11.
+
+02:00  HARD STOP: nếu chưa xong → revert sang VM cũ, Resume 4 monitor,
+       ghi "FAIL" + lý do vào evidence. Không kéo dài quá 02:00.
+
+02:00  Resume cả 4 monitor → verify 4 Up.
+```
+
+> Ngoài khung 00:00–02:00 **không deallocate VM**. Việc Stop/Deallocate trong drill là có chủ đích, có Pause monitor, khác với 4 lần shutdown sự cố hôm 17–20/11.
+
+#### B. 25/11 02:05 → 02:20 — đo T0 → T1 (delivery)
+
+```bash
+# Sau khi monitor đã Resume và Up
+date -u +%FT%TZ          # T0
+sudo systemctl stop nginx
+# chờ Discord #alert + email tới → ghi T1
+sudo systemctl start nginx
+curl -sS https://internship-tracker.duckdns.org/health
+```
+
+- `T1 - T0` mục tiêu **≤ 10'** (interval 5' + trễ).
+- Ghi vào `docs/evidence/25-26-drill.txt` (append, KHÔNG ghi đè dry-run 20/11).
+
+#### C. 27/11 15:00 — đo T2 (phản ứng người trực)
+
+Partner bất ngờ `sudo systemctl stop nginx` lúc **Nam không biết trước** (không thức khuya).
+Nam ack trong `#alert` trong vòng **15 phút** → `T2 - T0 ≤ 15'`.
+
+| Chỉ số | Công thức | Mục tiêu |
+|---|---|---|
+| Delivery | `T1 - T0` (25/11) | ≤ 10' |
+| Phản ứng | `T2 - T0` (27/11) | **≤ 15'** |
+| Kênh nhận | Discord + email | Cả 2 |
+
+Ghi `T0/T1/T2`, người trực, độ trễ và ảnh `#alert` vào `docs/evidence/27-alert-response.txt`.
+
+> **Nếu bỏ 27/11:** evidence phải ghi rõ **“T2 chưa đo”** + xác nhận đã test **mobile push** cho `#alert`. Không được im lặng.
 
 ---
 
