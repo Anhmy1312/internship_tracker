@@ -275,3 +275,35 @@ button:hover {
         flex: 1;
     }
 }
+
+.login-card {
+    max-width: 460px;
+    margin: 32px auto;
+}
+
+.login-card label {
+    display: block;
+    margin-bottom: 12px;
+}
+
+.login-card button[type="submit"] {
+    width: 100%;
+}
+
+.link-btn {
+    margin-top: 12px;
+    width: 100%;
+    background: transparent;
+    color: var(--green);
+    text-decoration: underline;
+}
+
+.user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 0.95rem;
+}

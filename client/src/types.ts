@@ -20,6 +20,17 @@ export interface Application {
     notes: string;
 }
 
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+}
+
+export interface AuthResponse {
+    token: string;
+    user: User;
+}
+
 export type NewApplication = Omit<Application, "id">;
 
 export type StatusFilter = ApplicationStatus | "all";
