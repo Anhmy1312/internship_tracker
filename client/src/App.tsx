@@ -84,7 +84,7 @@ function App() {
     }
 
     if (checkingAuth) {
-        return <p className="loading">Checking seasion...</p>;
+        return <p className="loading">Checking session...</p>;
     }
 
     if (!user) {
@@ -123,7 +123,7 @@ function App() {
                 handleLogout();
                 return false;
             }
-            setError("Could not create application.");
+            setError("Could not update status.");
             return false;
         }
     }
