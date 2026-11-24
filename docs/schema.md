@@ -46,7 +46,8 @@ Cả ba đều bắt đầu bằng user_id vì mọi query của API đều lọ
 - BIGINT → `pg` trả string, khớp `Application.id: string`
 - DATE → select `deadline::text` để tránh lệch timezone
 - NULL → `toApi` đổi thành `""` cho `deadline`
-- Week 4 chưa có auth, `user_id` lấy từ `DEMO_USER_ID`
+- Từ Week 5, `user_id` lấy từ JWT (`Authorization: Bearer`), không lấy từ body/query
+- Mọi query lọc `WHERE user_id = $n`; đơn của user khác trả `404`
 
 ## 6. Năm query
 ```sql

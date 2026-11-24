@@ -23,7 +23,9 @@ Client: http://localhost:5173
 ## OWASP
 
 - A01: 4 dong 404 o tren
-- A02: password_hash dang $2b$10$, khong co plaintext
+- A02: 4 user tao qua auth dung bcrypt $2b$10$ (60 ky tu)
+- A02: user id 1 (demo) la row legacy Week 4, hash placeholder 18 ky tu,
+  chua phai bcrypt - set lai truoc 30/11
 - A03: tat ca query dung tham so $n
 - A05: X-Powered-By tat, 500 tra JSON chung
 - A07: login sai email va sai password cung 401
@@ -33,3 +35,4 @@ Client: http://localhost:5173
 
 - Token da luoc, khong commit token that.
 - Test chay tren Neon branch dev, khong dung DB production.
+- Da doi chieu host server/.env voi branch dev tren Neon Console ngay 24/11.

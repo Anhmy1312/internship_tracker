@@ -17,20 +17,33 @@ The API runs at http://127.0.0.1:3000.
 
 ## Endpoints
 
+Public:
+
 | Method | Path | Body | Success | Loi |
 |---|---|---|---|---|
 | GET | /health | — | 200 JSON | — |
-| GET | /applications | — | 200 array | 500 |
-| GET | /applications/:id | — | 200 object | 400, 404 |
-| POST | /applications | JSON | 201 object | 400 |
-| PATCH | /applications/:id | JSON | 200 object | 400, 404 |
-| DELETE | /applications/:id | — | 204 | 400, 404 |
+| POST | /auth/register | JSON `{email,password,name}` | 201 `{token,user}` | 400, 409 |
+| POST | /auth/login | JSON `{email,password}` | 200 `{token,user}` | 401 |
 
-user_id lay tu DEMO_USER_ID (Week 4 chua co auth). Tat ca query loc user_id truoc.
+Protected — can header `Authorization: Bearer <token>`:
+
+| Method | Path | Body | Success | Loi |
+|---|---|---|---|---|
+| GET | /auth/me | — | 200 `{user}` | 401 |
+| GET | /applications | — | 200 array | 401, 500 |
+| GET | /applications/:id | — | 200 object | 400, 401, 404 |
+| POST | /applications | JSON | 201 object | 400, 401 |
+| PATCH | /applications/:id | JSON | 200 object | 400, 401, 404 |
+| DELETE | /applications/:id | — | 204 | 400, 401, 404 |
+
+- JWT HS256, het han theo `JWT_EXPIRES_IN` (mac dinh 1h).
+- `user_id` lay tu token, khong lay tu body/query. Moi query loc `WHERE user_id = $n`.
+- Truy cap don cua user khac tra `404` de khong lo don co ton tai.
+- Register trung email tra `409`; login sai email hoac sai password deu tra `401 Invalid credentials`.
 
 ## Environment
 
-Xem .env.example: DATABASE_URL, PORT (3000), CORS_ORIGIN (http://localhost:5173), API_VERSION, DEMO_USER_ID.
+Xem .env.example: DATABASE_URL, PORT (3000), CORS_ORIGIN (http://localhost:5173), API_VERSION, JWT_SECRET, JWT_EXPIRES_IN (1h).
 
 ## Scripts
 
