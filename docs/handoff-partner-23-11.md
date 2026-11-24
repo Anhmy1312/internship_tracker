@@ -72,8 +72,8 @@ URL webhook đã lộ trong terminal history / log cấu hình (ảnh `21-alert.
 
 ## 7. Việc còn lại trong trial (phía infra)
 
-- 24/11: fail2ban jail cho Nginx (bad bots) + log rotation
-- 25–26/11: rebuild drill từ VPS trắng (đo giờ thật; mục tiêu 30 phút có thể thành 40–45 do cert + DuckDNS)
+- 24/11 (T0 linh hoạt, báo trước 30'): rebuild drill từ VPS trắng — tái dùng IP `40.83.74.1`, DNS không đổi. Đo giờ thật; mục tiêu ~50 phút, hard stop T0+2h
+- 27/11 15:00: đo T2 (alert delivery + phản ứng người trực)
 - 27–29/11: báo cáo + tổng hợp
 
 ## 8. Liên lạc

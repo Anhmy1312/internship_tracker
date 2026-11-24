@@ -71,7 +71,7 @@ systemctl is-enabled ufw    # enabled
 | ED25519 host key | `SHA256:JoDCMLRp+BPRUnLYhPhnu7YnNgLAfr19dh5aoJdSURM8` | `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` |
 
 > Ranh giới cần nhớ: **key user** (bảng trên) = ai được đăng nhập; **host key** = có đúng là máy chủ không (chống MITM). Prompt "authenticity of host" hiện **host key**, không phải key user.
-> ⚠️ Rebuild drill (25–26/11) tạo máy mới → **host key đổi** → máy nào từng SSH sẽ báo `REMOTE HOST IDENTIFICATION HAS CHANGED`. Xoá dòng cũ: `ssh-keygen -R 40.83.74.1` rồi vào lại, so fingerprint mới (SSH sẽ tự ghi vào `known_hosts`).
+> ⚠️ Rebuild drill (24/11) tạo máy mới → **host key đổi** → máy nào từng SSH sẽ báo `REMOTE HOST IDENTIFICATION HAS CHANGED`. Xoá dòng cũ: `ssh-keygen -R 40.83.74.1` rồi vào lại, so fingerprint mới (SSH sẽ tự ghi vào `known_hosts`). IP giữ nguyên nên `known_hosts` không đổi host, chỉ đổi key.
 **Lệnh SSH:** `ssh staging` (alias trong `C:\Users\PC\.ssh\config`), hoặc đầy đủ `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_it" deploy@40.83.74.1`.
 
 **Nơi giữ bí mật (không nằm trong repo):**
@@ -242,9 +242,9 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 
 | # | Bước | Lệnh / việc | Phút | Giờ thật |
 |---|---|---|---|---|
-| 1 | Hạ TTL DNS (làm trước ≥ 24h) | — | 0 | ☐ |
-| 2 | Tạo VPS Ubuntu 24.04 | Portal → VM → image Ubuntu 24.04, size `B2ats_v2`, **NSG mở 22/80/443**, Public IP **Static** | 5 | ☐ |
-| 3 | Trỏ DNS về IP mới | DuckDNS update bằng `curl` (mục 4) | 1 | ☐ |
+| 1 | DNS: **không đổi** (tái dùng IP tĩnh) | TTL DuckDNS đã 60s; **không** chạy `curl` update DuckDNS | 0 | ☐ |
+| 2 | Stop/Deallocate VM cũ → **dissociate** IP `40.83.74.1` | Portal → VM cũ → Stop → chờ `Stopped (deallocated)`. **Không xoá VM/disk.** Public IP `40.83.74.1` → **Dissociate** | 3 | ☐ |
+| 3 | Tạo VPS Ubuntu 24.04, **Public IP = Use existing `40.83.74.1`** | Portal → VM → image Ubuntu 24.04, size `B2ats_v2`, **NSG mở 22/80/443**, Auth **SSH public key**, username **`deploy`**, key `id_ed25519_it.pub`. Public IP **Use existing → 40.83.74.1**. DNS giữ nguyên | 5 | ☐ |
 | 4 | Copy + chạy bootstrap | `scp -i <key> infra/bootstrap.sh deploy@IP:/tmp/` → `sudo bash /tmp/bootstrap.sh` | 6 | ☐ |
 | 5 | Test key login ở terminal mới | `ssh -i <key> deploy@IP` | 2 | ☐ |
 | 6 | Chạy hardening | `sudo bash /tmp/bootstrap.sh --harden` | 1 | ☐ |
@@ -256,16 +256,16 @@ DB Postgres: chưa có trong trial. Giai đoạn sau: `pg_dump` hàng ngày + đ
 | 12 | Certbot | `certbot certonly --nginx -d internship-tracker.duckdns.org --dry-run` rồi bỏ `--dry-run`; kiểm tra `certbot certificates` | 3 | ☐ |
 | 13 | Đổi sang config pha 2 (HTTPS) **bản API** | copy `infra/nginx/internship-tracker-api.conf` → `/etc/nginx/sites-available/internship-tracker`; `nginx -t`, reload. `/health` + `/applications` proxy sang `127.0.0.1:3000` (file đã lên `main` qua PR #8) | 1 | ☐ |
 | 14 | **Cài Node 22 LTS** | `curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs`; `node -v` phải `v22.x` (dùng `/usr/bin/node`, không dùng nvm) | 3 | ☐ |
-| 15 | **Deploy server + DB** | `scp -r server deploy@IP:/opt/internship-tracker/`; `cd /opt/internship-tracker/server && npm ci`; ghi `.env` (`DATABASE_URL` từ Bitwarden, `PORT=3000`, `CORS_ORIGIN=https://anhmy1312.github.io`, `API_VERSION=0.1.0`, `DEMO_USER_ID=1`), `chmod 600 .env`; `npm run db:check && npm run db:setup` | 4 | ☐ |
+| 15 | **Deploy server + DB** | **Chỉ code từ `main`** (`bb457b4`), KHÔNG deploy `week-5-auth`. Dùng worktree sạch `main` hoặc `git archive`; **không** scp `.env`/`node_modules` local. `scp -r server deploy@IP:/opt/internship-tracker/`; `cd .../server && npm ci`; `.env` (`DATABASE_URL` **production** từ Bitwarden/backup, `PORT=3000`, `CORS_ORIGIN=https://anhmy1312.github.io`, `API_VERSION=0.1.0`, `DEMO_USER_ID=1`), `chmod 600`; **chỉ `npm run db:check`** — KHÔNG chạy `db:setup` vì DB production đã có schema từ 21/11 | 4 | ☐ |
 | 16 | **systemd API** | copy `deploy/internship-tracker.service` → `/etc/systemd/system/`; `daemon-reload`; `enable --now internship-tracker`; phải `active (running)` | 2 | ☐ |
 | 17 | **Fail2ban jail cho Nginx** | Copy `infra/fail2ban/jail.d/internship-tracker.local` → `/etc/fail2ban/jail.d/`; `sudo fail2ban-client -t`; `sudo systemctl restart fail2ban`; `sudo fail2ban-client status` phải thấy `nginx-limit-req` + `nginx-botsearch` (chi tiết §11.1) | 3 | ☐ |
 | 18 | **Kiểm tra log rotation** | `sudo logrotate -d /etc/logrotate.d/nginx`; `sudo logrotate -f /etc/logrotate.d/nginx`; `ls -lh /var/log/nginx/internship-tracker.*` thấy `.1`/`.2.gz`; `df -h /` | 1 | ☐ |
-| 19 | Verify thật | `curl -sS https://.../health` → JSON **API** `{"status":"ok","uptime":...,"version":"0.1.0"}`; `curl .../applications` → 200 array 3 đơn; `curl https://.../` → 200 HTML; HTTP → 301; CRUD 1 đơn (thêm → reload còn → xoá, DB lại 3 seed); `sudo fail2ban-client status` → 3 jail; logrotate `.1`/`.2.gz`; test rate limit vào **`/`** 15 request → 6×200 rồi 429 (**KHÔNG test trên `/health`** vì location riêng, không bị limit). Chạy `bash infra/scripts/preflight-api.sh` | 5 | ☐ |
-| | **Tổng** | mục tiêu ≤ 50 (thực tế 45–55 do cert issuance + npm ci + DuckDNS lan) | **~48** | ☐ |
+| 19 | Verify thật | **Đếm baseline trước khi CRUD** (`/applications` lúc này phải đúng 3 đơn: Shopee, Grab, Local startup). `curl /health` → JSON **API** `{"status":"ok","uptime":...,"version":"0.1.0"}`; `curl /` → 200 HTML; HTTP → 301; CRUD 1 đơn (thêm → reload còn → xoá) → số đơn **quay lại đúng baseline**; `fail2ban-client status` → 3 jail; logrotate `.1`/`.2.gz`; rate limit vào **`/`** 15 request → 6×200 rồi 429 (**KHÔNG test `/health`**). Chạy `sudo bash infra/scripts/preflight-api.sh` | 5 | ☐ |
+| | **Tổng** | mục tiêu ≤ 50 (thực tế 45–55 do cert issuance + npm ci). IP reuse bỏ được bước DNS, thêm 2' detach/attach | **~50** | ☐ |
 
 Nếu vượt 50 phút: ghi rõ bước nào chậm và sửa runbook — **không** sửa bằng cách bỏ bước. Đo **giờ thật**, đừng ước lượng.
 
-> ⚠️ Bốn lỗi chỉ lộ khi rebuild từ máy trắng (đã phát hiện trước drill 25–26):
+> ⚠️ Bốn lỗi chỉ lộ khi rebuild từ máy trắng (đã phát hiện trước drill 24/11):
 > 1. `bootstrap.sh` **không cài nginx/certbot** → phải có bước 9.
 > 2. Thiếu `tls.conf`/`security.conf` → `include` báo file not found; thiếu `rate-limit.conf` → `zone "it_limit" does not exist`.
 > 3. Copy zone file **trước** site config, nếu không `nginx -t` fail.
@@ -315,54 +315,66 @@ sudo nginx -t && sudo systemctl reload nginx
 
 Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 
-### 11.2. Checklist bổ sung cho drill 25–26 (review 20/11)
+### 11.2. Checklist bổ sung cho drill 24/11 (review 20/11)
 
 1. **SSH host key đổi sau rebuild:** `ssh staging` báo `REMOTE HOST IDENTIFICATION HAS CHANGED` → chạy `ssh-keygen -R 40.83.74.1` rồi SSH lại. **Không phải bị tấn công.**
-2. **Certbot rate limit:** tối đa 5 cert trùng/tuần. Chỉ chạy lại `certbot certonly` **sau khi** `curl http://<host>/` đã 200 qua DNS mới; không gọi lại liên tục lúc rebuild hỏng.
-3. **Thứ tự sau rebuild (IP tĩnh giữ nguyên):**
-   `IP tĩnh → DNS DuckDNS → bootstrap.sh → nginx config (snippets) → deploy.sh (4 file tĩnh) → TLS/certbot → Node 22 + server + .env + npm ci + db:setup + systemd → 3 jail fail2ban → ufw/NSG → verify /health, /applications, /, 301 + CRUD → resume monitor.`
+2. **Certbot rate limit:** tối đa 5 cert trùng/tuần. `--dry-run` phải PASS trước; chỉ chạy lệnh thật khi IP `40.83.74.1` đã attach vào VM mới và `curl http://<host>/` trả 200. Không gọi lại liên tục lúc rebuild hỏng.
+3. **Thứ tự sau rebuild (tái dùng IP, DNS không đổi):**
+   `Pause 4 monitor → Stop/Deallocate VM cũ → dissociate IP 40.83.74.1 → tạo VM mới (Use existing IP, username deploy) → bootstrap.sh → nginx snippets → site HTTP → TLS/certbot → site API → 4 file tĩnh → swap → Node 22 + server + .env + npm ci + db:check + systemd → 3 jail fail2ban → logrotate → verify /health, /applications, /, 301 + CRUD → Resume monitor.`
 4. **Evidence:** file `docs/evidence/25-26-drill.txt` — khi drill thật **append entry mới**, KHÔNG ghi đè (giữ lại entry dry-run 20/11).
 5. **Pause/Resume:** đúng **4 monitor đang có** (Health + Site + Redirect + Pages) — tất cả đều gửi alert Discord; xem §12.
-6. **Cửa sổ Pause:** 25/11 **00:00 → 02:00** (2 giờ), rebuild xong resume + verify ngay; không pause 24h.
+6. **Cửa sổ Pause:** **24/11, T0 linh hoạt** — khung `T0 → T0+2h`; báo partner trước 30'. Không pause 24h, không làm qua đêm.
 7. **Negative test Pause — ✅ ĐÃ TEST 20/11:** Pause 4 monitor → `sudo systemctl stop nginx` → chờ 7' → Discord `#alert` **KHÔNG** có tin mới → resume + start nginx. Kết quả PASS, evidence `20-negative-pause.txt`. Nếu có tin → Pause hỏng, drill sẽ bắn alert giả.
+8. **Preflight 15' trước T0:** backup `etc-backup.tgz` (`/etc/letsencrypt` + `/etc/nginx`) và `.env` production ra ngoài repo; chụp **NSG inbound rules**; kiểm tra **quota vCPU** còn ≥ 2; xác nhận **auto-shutdown Off**; mở sẵn 4 monitor.
+9. **Baseline DB:** đếm số đơn **trước** khi CRUD. Baseline hiện tại = **3** (Shopee, Grab, Local startup). Sau khi xoá đơn test phải quay lại đúng 3.
 
-### 11.3. Drill gộp 25/11 + đo alert 27/11 (chốt 23/11)
+### 11.3. Drill gộp 24/11 + đo alert 27/11 (chốt 23/11)
 
 **Nguyên tắc:** đo alert **SAU khi Resume monitor**, không đo lúc đang Pause.
 
-#### A. Khung 25/11 00:00 → 02:00 (drill rebuild)
+#### A. Khung 24/11, T0 linh hoạt → T0+2h (drill rebuild)
 
 ```text
-00:00  Pause cả 4 monitor (Health + Site + Redirect + Pages)
-       Giữ VM CŨ: Stop/Deallocate có, nhưng KHÔNG xoá disk/resource đến 26/11.
-       (Static IP 40.83.74.1 phải detach khỏi VM cũ để gắn sang VM mới.)
+T0  Pause cả 4 monitor (Health + Site + Redirect + Pages) -> ghi giờ
+       Stop/Deallocate VM CŨ (có chủ đích), KHÔNG xoá disk/resource đến 26/11.
+       Dissociate Static IP 40.83.74.1 khỏi VM cũ.
 
-00:00–02:00  Rebuild theo §11 + verify:
+T0+0–10'  Tạo VM mới Ubuntu 24.04:
+       size B2ats_v2, NSG 22/80/443, Auth SSH key, username `deploy`,
+       Public IP = Use existing -> 40.83.74.1.
+       DNS internship-tracker.duckdns.org GIỮ NGUYÊN — không update DuckDNS.
+       Test: ssh staging "hostname" -> vm-it-staging-2
+
+T0+10' → T0+55'  Rebuild theo §11 + verify:
        /health 200 (JSON API), / 200, HTTP → 301
        3 jail fail2ban active; logrotate -f có .1/.2.gz
-       CRUD 1 đơn test (thêm → reload còn → xoá), DB lại 3 seed
+       CRUD 1 đơn test (thêm → reload còn → xoá) -> số đơn về đúng baseline 3
        Ghi GIỜ THẬT từng bước vào bảng §11.
 
-02:00  HARD STOP: nếu chưa xong → revert sang VM cũ, Resume 4 monitor,
-       ghi "FAIL" + lý do vào evidence. Không kéo dài quá 02:00.
+T0+75'  Go/no-go: chưa qua bước 16 (systemd API) -> chuẩn bị revert.
 
-02:00  Resume cả 4 monitor → verify 4 Up.
+Resume  NGAY khi verify xong (không chờ T0+2h) -> verify 4 Up.
+
+T0+2h  HARD STOP: nếu chưa xong -> revert theo §11.3D, Resume 4 monitor,
+       ghi "FAIL" + lý do vào evidence. Không kéo dài quá T0+2h.
 ```
 
-> Ngoài khung 00:00–02:00 **không deallocate VM**. Việc Stop/Deallocate trong drill là có chủ đích, có Pause monitor, khác với 4 lần shutdown sự cố hôm 17–20/11.
+> Ngoài khung `T0 → T0+2h` **không deallocate VM**. Việc Stop/Deallocate trong drill là có chủ đích, có Pause monitor, khác với 4 lần shutdown sự cố hôm 17–20/11.
 
-#### B. 25/11 02:05 → 02:20 — đo T0 → T1 (delivery)
+#### B. Sau khi Resume, trong T0+2h+5' → +20' — đo delivery
+
+> Gọi `A0/A1` để không lẫn với `T0` của drill. Khi ghi evidence, đây là cặp `T0/T1` của lần đo delivery.
 
 ```bash
 # Sau khi monitor đã Resume và Up
-date -u +%FT%TZ          # T0
+date -u +%FT%TZ          # A0
 sudo systemctl stop nginx
-# chờ Discord #alert + email tới → ghi T1
+# chờ Discord #alert + email tới → ghi A1
 sudo systemctl start nginx
 curl -sS https://internship-tracker.duckdns.org/health
 ```
 
-- `T1 - T0` mục tiêu **≤ 10'** (interval 5' + trễ).
+- `A1 - A0` mục tiêu **≤ 10'** (interval 5' + trễ).
 - Ghi vào `docs/evidence/25-26-drill.txt` (append, KHÔNG ghi đè dry-run 20/11).
 
 #### C. 27/11 15:00 — đo T2 (phản ứng người trực)
@@ -372,13 +384,30 @@ Nam ack trong `#alert` trong vòng **15 phút** → `T2 - T0 ≤ 15'`.
 
 | Chỉ số | Công thức | Mục tiêu |
 |---|---|---|
-| Delivery | `T1 - T0` (25/11) | ≤ 10' |
+| Delivery | `A1 - A0` (24/11, sau Resume) | ≤ 10' |
 | Phản ứng | `T2 - T0` (27/11) | **≤ 15'** |
 | Kênh nhận | Discord + email | Cả 2 |
 
 Ghi `T0/T1/T2`, người trực, độ trễ và ảnh `#alert` vào `docs/evidence/27-alert-response.txt`.
 
 > **Nếu bỏ 27/11:** evidence phải ghi rõ **“T2 chưa đo”** + xác nhận đã test **mobile push** cho `#alert`. Không được im lặng.
+
+#### D. Revert khi hard stop (bắt đầu trước T0+105')
+
+Làm đúng thứ tự, không đợi hết T0+2h:
+
+```text
+1. VM vm-it-staging-2 -> Stop -> Stopped (deallocated)
+2. Public IP 40.83.74.1 -> Dissociate khỏi NIC vm-it-staging-2
+3. VM vm-it-staging (cũ) -> Start  (disk còn nguyên, boot lại như trước)
+4. Public IP 40.83.74.1 -> Associate -> NIC của vm-it-staging
+5. ssh staging "sudo systemctl start nginx && systemctl is-active nginx internship-tracker"
+6. Verify: /health 200, / 200, http 301  -> phải như baseline
+7. Resume 4 monitor -> verify 4 Up
+8. Ghi "FAIL" + lý do + giờ vào evidence
+```
+
+Mất khoảng **5–8 phút**. VM cũ + disk giữ đến hết **26/11** rồi mới xoá.
 
 ---
 
@@ -546,12 +575,13 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 | 21/11 | Negative test Pause (20/11) + negative test alert Redirect/Pages ✅ | xong |
 | 23/11 | **Không deploy lại** (API + Pages đã live từ 21/11) | ✅ |
 | 24/11 | fail2ban Nginx + log rotation | ✅ xong từ 20/11 |
-| 25/11 00:00–02:00 | Drill rebuild gộp (§11.3A): Pause 4 monitor → rebuild + verify `/health`, `/`, 301, 3 jail, logrotate, CRUD 1 đơn → **hard stop 02:00** → Resume 4 Up. Giữ VM cũ đến 26/11, không xoá disk | ☐ |
-| 25/11 02:05–02:20 | Đo `T0→T1` delivery sau khi Resume (§11.3B), append `25-26-drill.txt` | ☐ |
+| **24/11, T0 linh hoạt** | Drill rebuild gộp (§11.3A): Pause 4 monitor → deallocate VM cũ → dissociate IP `40.83.74.1` → tạo VM mới (Use existing IP) → rebuild + verify `/health`, `/`, 301, 3 jail, logrotate, CRUD 1 đơn → **hard stop T0+2h** → Resume 4 Up. Báo partner trước 30'. Giữ VM cũ đến 26/11, không xoá disk | ☐ |
+| **24/11, T0+2h+5' → +20'** | Đo delivery `A0→A1` sau khi Resume (§11.3B), append `25-26-drill.txt` | ☐ |
 | 27/11 15:00 | Đo `T2` — partner stop nginx bất ngờ, Nam ack `#alert` ≤ 15' (§11.3C). Nếu bỏ → ghi "T2 chưa đo" + test mobile push | ☐ |
 | 28/11 20:00 → 29/11 08:00 | **Nam** trực `#alert` (SLA 15') — xong ca thì bàn giao | ☐ |
 | 29/11 08:00 → demo xong | **Anh Mỹ** trực `#alert`, là đầu mối trong demo (khớp §12.1) | ☐ |
 | Sau 29/11 | 1 PR close-out duy nhất (protection + webhook + monitor + drill) | ☐ branch `infra/week2-closeout` sẵn |
 
 - PR nhỏ **#8** (3 file rebuild) **đã merge** (merge commit **`e9727a1`**) — đây là PR hạ tầng, không phải PR lẻ về docs.
-- **Không deallocate VM từ giờ đến hết demo**, trừ khung drill có chủ đích 25/11 00:00–02:00 (đã Pause monitor). VM cũ giữ disk đến 26/11 để revert nếu hard stop.
+- **Không deallocate VM từ giờ đến hết demo**, trừ khung drill có chủ đích trong ngày **24/11** (đã Pause monitor). VM cũ giữ disk đến 26/11 để revert nếu hard stop.
+- **Không deploy `week-5-auth` lên production trước demo 29/11.** Drill chỉ deploy `main` (`bb457b4`).

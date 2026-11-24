@@ -1,0 +1,40 @@
+# Dry-run Pause/Resume monitor — 20/11/2026
+
+Thử quy trình Pause/Resume trước drill thật 24/11.
+Entry 1 = sau khi Pause cả 2 monitor; Entry 2 = sau khi Resume lại.
+Khi drill thật, append entry mới cho ngày 24/11 (giữ nguyên 2 entry dry-run 20/11).
+
+Ảnh: docs/evidence/25-drill-paused.png, docs/evidence/26-drill-resumed.png.
+
+=== 2026-11-20 01:50:18 UTC — SAU PAUSE (dry-run) ===
+HEALTH:
+{"status":"ok","service":"internship-tracker","phase":"static"}
+ROOT:
+200
+
+=== 2026-11-20 01:57:50 UTC — SAU RESUME (dry-run) ===
+HEALTH:
+{"status":"ok","service":"internship-tracker","phase":"static"}
+ROOT:
+200
+
+=== REAL DRILL 24/11/2026 — entry thật (điền giờ khi chạy) ===
+
+T0 (Pause 4 monitor):            __:__
+Dissociate IP 40.83.74.1:        __:__
+VM mới running (vm-it-staging-2):__:__
+bootstrap xong:                  __:__
+hardening xong:                  __:__
+nginx + certbot xong:            __:__
+deploy server + systemd active:  __:__
+fail2ban 3 jail + logrotate:     __:__
+verify PASS (/health, /, 301, CRUD): __:__
+Resume 4 monitor (4 Up):         __:__
+
+Delivery A0 -> A1:  __:__ -> __:__  (__ phút)
+Hard stop T0+2h = __:__   | Kết quả: PASS / FAIL
+Baseline DB: 3 đơn -> sau CRUD: __ -> sau xoá: __
+Revert (chỉ khi FAIL): __
+
+Ghi chú:
+
