@@ -1,0 +1,35 @@
+# Auth local test — 24/11/2026
+
+Branch: week-5-auth
+DB: Neon branch dev
+API: http://127.0.0.1:3000
+Client: http://localhost:5173
+
+## Ket qua
+
+- register A/B: 201
+- register trung email: 409
+- login sai: 401 Invalid credentials
+- login email khong ton tai: 401 Invalid credentials (cung body)
+- GET /applications khong token: 401
+- token sua 2 ky tu: 401
+- token alg none: 401
+- token het han (10s): 401
+- B doc don A: 404
+- B sua don A: 404
+- B xoa don A: 404
+- A van thay 1 don: 200
+
+## OWASP
+
+- A01: 4 dong 404 o tren
+- A02: password_hash dang $2b$10$, khong co plaintext
+- A03: tat ca query dung tham so $n
+- A05: X-Powered-By tat, 500 tra JSON chung
+- A07: login sai email va sai password cung 401
+- XSS: khong co dangerouslySetInnerHTML
+
+## Ghi chu
+
+- Token da luoc, khong commit token that.
+- Test chay tren Neon branch dev, khong dung DB production.
