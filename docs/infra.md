@@ -14,7 +14,7 @@
 |---|---|
 | Provider / region | **Azure for Students** — region **East Asia (Hong Kong)** |
 | Gói / spec | `Standard_B2ats_v2` — **1 vCPU (constrained) / 1 GiB RAM**, OS disk 30 GiB Standard SSD |
-| IP công khai | **40.83.74.1** (Static, gắn NIC `vm-it-staging130`) |
+| IP công khai | **57.158.81.247** (Static, resource `vm-it-staging-2-ip`, gắn NIC `vm-it-staging130`) — từ **25/11/2026**; IP cũ `40.83.74.1` đã bị xoá khỏi Azure, xem §13.2 |
 | IP private | 172.16.0.4 (`vnet-eastasia-1/snet-eastasia-1`) |
 | OS | Ubuntu **24.04.5** LTS, x64 Gen2, kernel 7.0.0-1017-azure |
 | Hostname phục vụ | `internship-tracker.duckdns.org` (DuckDNS, A record) |
@@ -55,7 +55,7 @@ sudo sshd -T | grep -Ei 'permitrootlogin|passwordauthentication|kbdinteractive'
 # kbdinteractiveauthentication no
 ```
 
-Đã verify 16/11: `ssh root@40.83.74.1` → `Permission denied (publickey)`; `ssh staging` (deploy, key) → OK.
+Đã verify 16/11 (IP cũ `40.83.74.1`): `ssh root@40.83.74.1` → `Permission denied (publickey)`; `ssh staging` (deploy, key) → OK. Từ 25/11 IP là `57.158.81.247`.
 
 **ufw:** `deny incoming`, `allow outgoing`, chỉ mở `22/80/443/tcp` (cả IPv6), bật cùng boot:
 
@@ -71,8 +71,8 @@ systemctl is-enabled ufw    # enabled
 | ED25519 host key | `SHA256:JoDCMLRp+BPRUnLYhPhnu7YnNgLAfr19dh5aoJdSURM8` | `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` |
 
 > Ranh giới cần nhớ: **key user** (bảng trên) = ai được đăng nhập; **host key** = có đúng là máy chủ không (chống MITM). Prompt "authenticity of host" hiện **host key**, không phải key user.
-> ⚠️ Rebuild drill (25–26/11) tạo máy mới → **host key đổi** → máy nào từng SSH sẽ báo `REMOTE HOST IDENTIFICATION HAS CHANGED`. Xoá dòng cũ: `ssh-keygen -R 40.83.74.1` rồi vào lại, so fingerprint mới (SSH sẽ tự ghi vào `known_hosts`).
-**Lệnh SSH:** `ssh staging` (alias trong `C:\Users\PC\.ssh\config`), hoặc đầy đủ `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_it" deploy@40.83.74.1`.
+> ⚠️ Rebuild drill (25–26/11) tạo máy mới → **host key đổi** → máy nào từng SSH sẽ báo `REMOTE HOST IDENTIFICATION HAS CHANGED`. Xoá dòng cũ: `ssh-keygen -R 57.158.81.247` rồi vào lại, so fingerprint mới (SSH sẽ tự ghi vào `known_hosts`).
+**Lệnh SSH:** `ssh staging` (alias trong `C:\Users\PC\.ssh\config`), hoặc đầy đủ `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_it" deploy@57.158.81.247`.
 
 **Nơi giữ bí mật (không nằm trong repo):**
 
@@ -130,7 +130,7 @@ Thiếu rule ở NSG thì `curl` từ ngoài sẽ **timeout** dù `ufw` đã m�
 
 | Type | Name | Value | TTL |
 |---|---|---|---|
-| A (DuckDNS) | `internship-tracker.duckdns.org` | **40.83.74.1** (Static — không đổi khi reboot) | 60 (DuckDNS cố định) |
+| A (DuckDNS) | `internship-tracker.duckdns.org` | **57.158.81.247** (Static — không đổi khi reboot) | 60 (DuckDNS cố định) |
 
 - Cập nhật IP khi rebuild: Portal → VM → Public IP → copy → dán vào DuckDNS:
   `curl "https://www.duckdns.org/update?domains=internship-tracker&token=<token>&ip=<IP>"`.
@@ -162,7 +162,7 @@ sudo systemctl stop nginx        # dùng để test alert (site chết)
 sudo systemctl start nginx
 ```
 
-> **VM đang Stopped/Deallocated (Azure):** Portal (tài khoản Azure của **Nam**) → `vm-it-staging` → **Start**, chờ 1–2 phút rồi mới `ssh`/`curl`. IP tĩnh `40.83.74.1` giữ nguyên; nếu IP đổi thì cập nhật DuckDNS **trước khi** test monitor.
+> **VM đang Stopped/Deallocated (Azure):** Portal (tài khoản Azure của **Nam**) → `vm-it-staging` → **Start**, chờ 1–2 phút rồi mới `ssh`/`curl`. IP tĩnh `57.158.81.247` giữ nguyên; nếu IP đổi thì cập nhật DuckDNS **trước khi** test monitor. Nếu resource Public IP bị xoá, IP **mất vĩnh viễn** — xem §13.2.
 
 `nginx -t` **trước** mọi `reload`. Không có service app nào khác trong trial.
 
@@ -306,7 +306,7 @@ sudo fail2ban-client status nginx-botsearch
 sudo fail2ban-client set nginx-botsearch unbanip <IP>
 ```
 
-> Test từ VM qua hostname sẽ ban IP công khai của chính VM (`40.83.74.1`), **không ảnh hưởng người dùng thật**; unban ngay. Không test bằng `127.0.0.1` vì nằm trong `ignoreip`.
+> Test từ VM qua hostname sẽ ban IP công khai của chính VM (`57.158.81.247`), **không ảnh hưởng người dùng thật**; unban ngay. Không test bằng `127.0.0.1` vì nằm trong `ignoreip`.
 
 Log rotation: **không tạo file mới**, dùng `/etc/logrotate.d/nginx` có sẵn (`daily`, `rotate 14`, `compress`, `delaycompress`, `notifempty`, `create 0640 www-data adm`, `postrotate invoke-rc.d nginx rotate`). Nó áp cho `*.log`, gồm cả `internship-tracker.*.log`. Kiểm tra:
 
@@ -323,7 +323,7 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 
 ### 11.2. Checklist bổ sung cho drill 25–26 (review 20/11)
 
-1. **SSH host key đổi sau rebuild:** `ssh staging` báo `REMOTE HOST IDENTIFICATION HAS CHANGED` → chạy `ssh-keygen -R 40.83.74.1` rồi SSH lại. **Không phải bị tấn công.**
+1. **SSH host key đổi sau rebuild:** `ssh staging` báo `REMOTE HOST IDENTIFICATION HAS CHANGED` → chạy `ssh-keygen -R 57.158.81.247` rồi SSH lại. **Không phải bị tấn công.**
 2. **Certbot rate limit:** tối đa 5 cert trùng/tuần. Chỉ chạy lại `certbot certonly` **sau khi** `curl http://<host>/` đã 200 qua DNS mới; không gọi lại liên tục lúc rebuild hỏng.
 3. **Thứ tự sau rebuild (IP tĩnh giữ nguyên):**
    `IP tĩnh → DNS DuckDNS → bootstrap.sh → nginx config (snippets) → deploy.sh (4 file tĩnh) → TLS/certbot → Node 22 + server + .env + npm ci + db:setup + systemd → 3 jail fail2ban → ufw/NSG → verify /health, /applications, /, 301 + CRUD → resume monitor.`
@@ -341,7 +341,7 @@ Bằng chứng: `docs/evidence/24-fail2ban-nginx.txt` (20/11/2026).
 ```text
 00:00  Pause cả 4 monitor (Health + Site + Redirect + Pages)
        Giữ VM CŨ: Stop/Deallocate có, nhưng KHÔNG xoá disk/resource đến 26/11.
-       (Static IP 40.83.74.1 phải detach khỏi VM cũ để gắn sang VM mới.)
+       (Static IP 57.158.81.247 phải detach khỏi VM cũ để gắn sang VM mới.)
 
 00:00–02:00  Rebuild theo §11 + verify:
        /health 200 (JSON API), / 200, HTTP → 301
@@ -489,6 +489,34 @@ curl -sS https://internship-tracker.duckdns.org/health
 
 ---
 
+### 13.2. Incident 25/11/2026 — mất IP tĩnh cũ `40.83.74.1`
+
+**Triệu chứng:** 13:04 local (06:04 UTC) kiểm tra thấy DNS vẫn trỏ `40.83.74.1` nhưng ping/22/443 đều timeout; `https://internship-tracker.duckdns.org/health` trả `000`.
+
+**Nguyên nhân:** Trong lúc thao tác Azure (tạo VM `vm-it-staging-2` + IP mới), **resource Public IP cũ đã bị xoá**. Azure chỉ giữ địa chỉ Static khi **resource Public IP còn tồn tại**; xoá resource → IP về pool ngay, **không khôi phục được** (kể cả support). Không phải auto-shutdown, không phải lỗi VM.
+
+**Timeline:**
+
+| Giờ local (UTC+7) | Sự kiện |
+|---|---|
+| ~11:45 | VM `vm-it-staging` được start lại; NIC nhận Public IP mới `57.158.81.247` (resource `vm-it-staging-2-ip`) |
+| 13:04 | Phát hiện DNS còn `40.83.74.1`, site DOWN (`000`); Azure chỉ còn 1 Public IP `57.158.81.247` |
+| 13:05 | Verify stack vẫn sống ở IP mới: SSH 22 mở, HTTP → 301, HTTPS `/` 200, `/health` 200, `/applications` 3 đơn, cert còn hạn 16/02/2027 |
+| 13:10 | Lấy token DuckDNS từ Bitwarden (không in ra chat), chạy update **từ VM** (mạng nhà bị chặn DuckDNS) → `OK` |
+| 13:12 | DNS → `57.158.81.247`; `/health` 200, `/` 200, 301, `/applications` 3 đơn |
+| 13:15 | UptimeRobot: **0 Down / 4 Up / 0 Paused**; 24h uptime 76.119% (6 incident, gồm sự cố này) |
+
+**Bài học / quy tắc mới:**
+
+- **KHÔNG xoá resource Public IP.** Khi rebuild: chỉ **detach** khỏi NIC cũ rồi **attach** sang NIC mới; resource và địa chỉ giữ nguyên.
+- IP tĩnh không phải tài sản cố định — chỉ tồn tại chừng nào resource còn.
+- Nếu buộc phải đổi IP: cập nhật DuckDNS **trước**, cert Let's Encrypt **không** phải cấp lại (cert theo domain, không theo IP).
+- DuckDNS có thể bị chặn từ mạng nhà → chạy `curl` update **từ chính VM** (VM ra Internet được).
+
+**Trạng thái sau sự cố:** `vm-it-staging` **Running** + IP `57.158.81.247`; `vm-it-staging-2` **Stopped (deallocated)**, giữ disk làm dự phòng đến sau demo 29/11.
+
+---
+
 ## 14. Việc còn nợ (ghi rõ để người sau biết)
 
 - [x] Rate limit Nginx `limit_req` — **xong 23/11**: zone `it_limit` 2r/s burst 5, `limit_req_status 429`; file `infra/nginx/snippets/rate-limit.conf` → `/etc/nginx/conf.d/rate-limit.conf`; `/health` nằm location riêng nên không bị limit; bằng chứng `docs/evidence/23-rate-limit.txt`
@@ -572,7 +600,7 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 1. `git fetch origin && git switch -c week-4-api origin/week-4-api`.
 2. `ssh staging "sudo mkdir -p /opt/internship-tracker && sudo chown deploy:deploy /opt/internship-tracker"`.
 3. Cài **Node 22 LTS qua NodeSource**: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs`.
-4. `scp -r server deploy@40.83.74.1:/opt/internship-tracker/`.
+4. `scp -r server deploy@57.158.81.247:/opt/internship-tracker/`.
 5. `cd /opt/internship-tracker/server && cp .env.example .env` → điền biến ở 17.1 → `npm ci` → `npm run db:check` → `npm run db:setup`.
 6. `scp deploy/internship-tracker.service staging:/tmp/` → `sudo install -m 644 /tmp/internship-tracker.service /etc/systemd/system/` → `daemon-reload` → `enable --now internship-tracker` → phải `active (running)`.
 7. Copy `infra/nginx/internship-tracker-api.conf` → `/etc/nginx/sites-available/internship-tracker` → `nginx -t` → `reload nginx`.
@@ -628,4 +656,5 @@ VITE_API_URL=https://internship-tracker.duckdns.org/applications
 | Sau 29/11 | 1 PR close-out duy nhất (protection + webhook + monitor + drill) | ☐ branch `infra/week2-closeout` sẵn |
 
 - PR nhỏ **#8** (3 file rebuild) **đã merge** (merge commit **`e9727a1`**) — đây là PR hạ tầng, không phải PR lẻ về docs.
+- **25/11 — sự cố IP:** IP đổi `40.83.74.1` → **`57.158.81.247`** do resource Public IP cũ bị xoá; đã cập nhật DuckDNS + verify đủ 4 monitor Up. Chi tiết §13.2, evidence `docs/evidence/25-ip-change-incident.txt`. Drill dùng IP mới.
 - **Không deallocate VM từ giờ đến hết demo**, trừ khung drill có chủ đích 25/11 00:00–02:00 (đã Pause monitor). VM cũ giữ disk đến 26/11 để revert nếu hard stop.

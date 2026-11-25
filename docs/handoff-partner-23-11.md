@@ -5,7 +5,7 @@
 
 ## 1. Trạng thái phía infra / Trial A
 
-- VM `vm-it-staging`, IP tĩnh `40.83.74.1`, Ubuntu 24.04.
+- VM `vm-it-staging`, IP tĩnh **`57.158.81.247`** (từ 25/11; IP cũ `40.83.74.1` đã mất — xem `docs/infra.md` §13.2), Ubuntu 24.04.
 - **Nginx + TLS đang chạy**: `https://internship-tracker.duckdns.org/`
   - `/` → 200 (site tĩnh), `/health` → JSON tĩnh
   - HTTP → 301 HTTPS, SSL Labs **A+**, HSTS + security headers
