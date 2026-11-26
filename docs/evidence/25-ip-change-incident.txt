@@ -1,0 +1,86 @@
+# Incident 25/11/2026 - mat IP tinh cu 40.83.74.1
+# Nguoi thuc hien: Nam (Azure owner) + ho tro SSH/verify
+# Mui gio: local = UTC+7
+
+## 1. Phat hien (13:04 local / 06:04 UTC)
+
+DNS internship-tracker.duckdns.org -> 40.83.74.1
+ping 40.83.74.1            -> 100% loss
+Test-NetConnection 22      -> TcpTestSucceeded=False
+curl https://.../health    -> 000 (khong ket noi)
+
+=> Domain tro IP cu nhung IP cu khong con gan voi VM nao.
+
+## 2. Kiem tra Azure Portal
+
+Public IP addresses (subscription Azure for Students):
+  vm-it-staging-2-ip   57.158.81.247   Standard   Associated: vm-it-staging
+  (khong con resource nao mang 40.83.74.1)
+
+Virtual machines:
+  vm-it-staging     Running              Primary NIC public IP: 57.158.81.247
+  vm-it-staging-2   Stopped (deallocated)
+
+Ket luan: resource Public IP cu da bi xoa -> Azure thu hoi 40.83.74.1 ve pool.
+Khong the khoi phuc (Static IP chi ton tai khi resource con).
+
+## 3. Xac minh stack van song o IP moi (13:05 local)
+
+ssh 57.158.81.247:22        -> open
+curl http://57.158.81.247/  -> 301
+curl -k https://57.158.81.247/ -> 200
+curl --resolve ...:443:57.158.81.247 https://.../health
+  -> 200 {"status":"ok","uptime":4740,"version":"0.1.0"}
+curl .../applications       -> 3 don (Shopee, Grab, Local startup)
+
+Tren VM:
+  cert:  notAfter=Feb 16 23:36:47 2027 GMT  (khong phai cap lai)
+  jails: nginx-botsearch, nginx-limit-req, sshd
+  nginx: active
+  api:   active
+  ufw:   active
+
+## 4. Khac phuc (13:10 local)
+
+Mang nha bi chan DuckDNS (curl 000, DNS van phan giai).
+VM Azure ra DuckDNS duoc (curl -o /dev/null -w '%{http_code}' -> 200).
+
+Lay token tu Bitwarden item "Trial A - DuckDNS" (khong in ra chat/log).
+Chay update TU VM:
+
+  curl "https://www.duckdns.org/update?domains=internship-tracker&token=<REDACTED>&ip=57.158.81.247"
+
+Ket qua: OK
+
+## 5. Verify sau khac phuc (13:12 local)
+
+DNS -> 57.158.81.247
+https://.../health          -> 200 {"status":"ok","uptime":5970,"version":"0.1.0"}
+https://.../                -> 200
+http://.../                 -> 301
+https://.../applications    -> 3 don
+
+UptimeRobot (13:15 local):
+  0 Down / 4 Up / 0 Paused
+  internship-tracker pages      Up 4d 6h
+  internship-tracker redirect   Up 3m 25s
+  internship-tracker site       Up 4s
+  internship-tracker.../health  Up 4s
+  24h: 76.119% uptime, 6 incidents (ghi nhan dung su co)
+
+## 6. Nguyen nhan & bai hoc
+
+Nguyen nhan: xoa resource Public IP cu trong luc thao tac Azure.
+Khong phai auto-shutdown, khong phai loi VM.
+
+Quy tac moi:
+- KHONG xoa resource Public IP. Khi rebuild chi DETACH khoi NIC cu
+  roi ATTACH sang NIC moi.
+- Static IP khong phai tai san co dinh; chi ton tai khi resource con.
+- Doi IP thi chi can cap nhat DuckDNS; cert Let's Encrypt khong doi
+  (cert theo domain, khong theo IP).
+- DuckDNS bi chan tu mang nha -> update tu chinh VM.
+
+Trang thai cuoi:
+- vm-it-staging   Running, IP 57.158.81.247
+- vm-it-staging-2 Stopped (deallocated), giu disk du phong den sau demo 29/11

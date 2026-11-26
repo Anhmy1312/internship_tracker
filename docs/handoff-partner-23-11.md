@@ -5,7 +5,7 @@
 
 ## 1. Trạng thái phía infra / Trial A
 
-- VM `vm-it-staging`, IP tĩnh `40.83.74.1`, Ubuntu 24.04.
+- VM `vm-it-staging`, IP tĩnh `57.158.81.247` (resource `vm-it-staging-2-ip`; đổi từ `40.83.74.1` ngày 25/11 — xem §13.2 runbook), Ubuntu 24.04.
 - **Nginx + TLS đang chạy**: `https://internship-tracker.duckdns.org/`
   - `/` → 200 (site tĩnh), `/health` → JSON tĩnh
   - HTTP → 301 HTTPS, SSL Labs **A+**, HSTS + security headers
@@ -72,7 +72,7 @@ URL webhook đã lộ trong terminal history / log cấu hình (ảnh `21-alert.
 
 ## 7. Việc còn lại trong trial (phía infra)
 
-- 24/11 (T0 linh hoạt, báo trước 30'): rebuild drill từ VPS trắng — tái dùng IP `40.83.74.1`, DNS không đổi. Đo giờ thật; mục tiêu ~50 phút, hard stop T0+2h
+- 27/11 (T0 linh hoạt, báo trước 30'): rebuild drill từ VPS trắng — tái dùng IP `57.158.81.247` (resource `vm-it-staging-2-ip`), DNS không đổi. Đo giờ thật; mục tiêu ~50 phút, hard stop T0+2h
 - 27/11 15:00: đo T2 (alert delivery + phản ứng người trực)
 - 27–29/11: báo cáo + tổng hợp
 

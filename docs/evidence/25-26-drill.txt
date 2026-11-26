@@ -1,8 +1,8 @@
 # Dry-run Pause/Resume monitor — 20/11/2026
 
-Thử quy trình Pause/Resume trước drill thật 24/11.
+Thử quy trình Pause/Resume trước drill thật 27/11.
 Entry 1 = sau khi Pause cả 2 monitor; Entry 2 = sau khi Resume lại.
-Khi drill thật, append entry mới cho ngày 24/11 (giữ nguyên 2 entry dry-run 20/11).
+Khi drill thật, append entry mới cho ngày 27/11 (giữ nguyên 2 entry dry-run 20/11).
 
 Ảnh: docs/evidence/25-drill-paused.png, docs/evidence/26-drill-resumed.png.
 
@@ -18,11 +18,14 @@ HEALTH:
 ROOT:
 200
 
-=== REAL DRILL 24/11/2026 — entry thật (điền giờ khi chạy) ===
+=== REAL DRILL 27/11/2026 — entry thật (điền giờ khi chạy) ===
+
+Hostname trước drill (VM production): vm-it-staging
+Hostname sau drill (VM mới):         vm-it-staging-3
 
 T0 (Pause 4 monitor):            __:__
-Dissociate IP 40.83.74.1:        __:__
-VM mới running (vm-it-staging-2):__:__
+Dissociate IP vm-it-staging-2-ip (57.158.81.247): __:__
+VM mới running (vm-it-staging-3):__:__
 bootstrap xong:                  __:__
 hardening xong:                  __:__
 nginx + certbot xong:            __:__
