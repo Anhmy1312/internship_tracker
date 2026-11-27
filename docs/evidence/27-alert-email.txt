@@ -1,0 +1,15 @@
+# UptimeRobot email — 27/11/2026
+
+Nguồn: email UptimeRobot, do Anh Mỹ cung cấp.
+Ảnh: `docs/evidence/27-alert-email.png`.
+
+- Started at: 2026-11-27 10:22:53 UTC
+- Resolved at: 2026-11-27 10:27:58 UTC
+- Duration: 5 minutes 5 seconds
+
+Đối chiếu:
+- A0 stop nginx: 2026-11-27 10:18:16 UTC
+- Alert email/Discord: 10:22:53 UTC
+- T1 = 4m37s → PASS (≤10')
+- Nginx start lại: 10:25:13 UTC
+- UptimeRobot resolved: 10:27:58 UTC

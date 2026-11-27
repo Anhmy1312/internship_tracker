@@ -1,0 +1,50 @@
+# Alert response — drill 27/11/2026
+
+## T1 — Delivery alert (sau Resume)
+
+- Ngày: 27/11/2026
+- Người stop: Anh Mỹ
+- Người trực/ack: Nam
+- Kênh: Discord #alert + email
+
+| Mốc | Giờ (UTC) | Ghi chú |
+|---|---|---|
+| A0 — stop nginx | 2026-11-27 10:18:16 | Giờ ghi ngay trước lệnh stop |
+| Nginx thực tế stopped | 10:18:38 | systemd journal |
+| Alert Discord | 10:22:53 | Discord hiển thị 5:22 PM; giây lấy từ email |
+| Alert email | 10:22:53 | UptimeRobot email: Started at 10:22:53 |
+| Nginx start lại | 10:25:13 | systemd |
+| UptimeRobot resolved | 10:27:58 | Email: Resolved at 10:27:58; duration 5m5s |
+| 4 monitor Up lại | 10:27:58 | Email resolved; ảnh UptimeRobot 4 Up xác nhận 0 Down / 4 Up lúc ~18:09 local |
+
+- T1 (alert - A0): **4m37s** → **PASS** (≤10')
+- Downtime nginx: 6m35s
+- Recovery đầy đủ: **9m42s** từ A0 (9m20s từ lúc nginx thực tế stop) → vẫn ≤10'
+- `/health` sau start: 200 JSON
+- Ảnh: `docs/evidence/27-alert-discord.png`, `docs/evidence/27-alert-email.png`, `docs/evidence/27-uptimerobot-4up.png`
+- Ảnh UptimeRobot 4 Up: 0 Down / 4 Up / 0 Paused lúc ~18:09 local
+  (Redirect Up 41m50s, Site 41m44s, Health 41m40s, Pages 6d3h)
+
+**Kết quả T1: PASS** (Discord + email + UptimeRobot 4 Up).
+
+## T2 — Phản ứng người trực
+
+- Thực tế: 27/11/2026, 20:01–20:11 local (13:01–13:11 UTC)
+- Người stop: Anh Mỹ
+- Người trực: Nam
+- T0 stop nginx: 13:01:41 UTC (systemd journal)
+- Alert Discord: 13:06 UTC (8:06 PM; email chính xác 13:06:43)
+- Alert email: 13:06:43 (UptimeRobot: incident started)
+- Nam ack: 13:10 UTC (20:10 local)
+- Nginx start lại: 13:07:59 UTC
+- UptimeRobot resolved: 13:11:49 (email; monitor down 5m6s)
+- Downtime nginx: 6m18s
+- T2 = ack - T0: **~8m19s** (theo mốc 20:10:00) → **PASS** (≤15')
+- Từ lúc alert đến ack: ~3m17s
+- Kết quả: **PASS** (Discord + email).
+- Ảnh: `docs/evidence/27-t2-4up.png`, `docs/evidence/27-t2-email.png`
+
+## Ghi chú
+
+- Không sửa evidence cũ; file này là evidence mới cho 27/11.
+- T2 đã chạy tối 27/11 và PASS qua Discord + email; evidence đã đủ.

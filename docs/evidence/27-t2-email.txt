@@ -1,0 +1,19 @@
+# UptimeRobot email — T2 27/11/2026
+
+Monitor: internship-tracker redirect
+Checked URL: http://internship-tracker.duckdns.org/health
+Root cause: Connection Timeout
+Incident started at: 2026-11-27 13:06:43
+Resolved at: 2026-11-27 13:11:49
+Duration: 5 minutes 6 seconds
+Location: N. Virginia, USA - IP 52.87.72.16
+
+Đối chiếu:
+- T0 stop nginx: 2026-11-27 13:01:41 UTC
+- Alert Discord: 13:06 UTC (email chính xác 13:06:43)
+- Nam ack: 13:10 UTC
+- T2 = ~8m19s → PASS (≤15')
+- Nginx start lại: 13:07:59 UTC
+- UptimeRobot resolved: 13:11:49 UTC
+
+Ảnh: `docs/evidence/27-t2-email.png`
